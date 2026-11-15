@@ -117,7 +117,7 @@ public final class SwitchService {
                 onListsChanged?(next, added)
             }
         } else if !sources.isEmpty {
-            let migrated = KeyLists.migrated(
+            let migrated = KeyLists.first(
                 sources: sources, legacyCapsSourceID: legacyCapsSourceID,
                 legacyFnModeKeys: legacyFnModeKeys, legacyEntry: legacyEntry)
             lists = migrated

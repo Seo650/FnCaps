@@ -31,12 +31,6 @@ FnCaps는 입력 소스를 Caps Lock과 fn(🌐) 두 키에 나눠 담습니다.
 brew install --cask Seo650/tap/fncaps
 ```
 
-Homebrew가 tap을 먼저 신뢰하라고 하면 아래를 실행하고 다시 설치합니다.
-
-```sh
-brew trust Seo650/tap
-```
-
 ### GitHub Releases
 
 1. [Releases](https://github.com/Seo650/FnCaps/releases/latest)에서 최신 `FnCaps-x.y.z.zip`을 받습니다.

@@ -31,12 +31,6 @@ FnCaps розподіляє ваші джерела вводу між двома
 brew install --cask Seo650/tap/fncaps
 ```
 
-Якщо Homebrew спершу попросить довіряти tap, виконайте це і встановіть знову:
-
-```sh
-brew trust Seo650/tap
-```
-
 ### GitHub Releases
 
 1. Завантажте найновіший `FnCaps-x.y.z.zip` зі сторінки [Releases](https://github.com/Seo650/FnCaps/releases/latest).

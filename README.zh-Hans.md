@@ -31,12 +31,6 @@ FnCaps 把输入法分到两个按键上：Caps Lock 和 fn（🌐）。
 brew install --cask Seo650/tap/fncaps
 ```
 
-如果 Homebrew 要求你先信任该 tap，请运行下面的命令，然后再次安装：
-
-```sh
-brew trust Seo650/tap
-```
-
 ### GitHub Releases
 
 1. 从 [Releases](https://github.com/Seo650/FnCaps/releases/latest) 下载最新的 `FnCaps-x.y.z.zip`。

@@ -31,12 +31,6 @@ FnCaps reparte las fuentes de entrada entre dos teclas: Caps Lock y fn (🌐).
 brew install --cask Seo650/tap/fncaps
 ```
 
-Si Homebrew le pide confiar primero en el tap, ejecute esto e instale de nuevo:
-
-```sh
-brew trust Seo650/tap
-```
-
 ### GitHub Releases
 
 1. Descargue el archivo `FnCaps-x.y.z.zip` más reciente desde [Releases](https://github.com/Seo650/FnCaps/releases/latest).

@@ -86,7 +86,14 @@ final class UpdateInstaller {
                 workspace = url
                 try await install(in: url, requirement: requirement, onStage: onStage)
                 await MainActor.run { completion(nil) }
-                await MainActor.run { NSApp.terminate(nil) }
+                // 주 큐 작업 안에서 terminate를 부르지 않는다. applicationShouldTerminate가 .terminateLater를
+                // 돌려주면 AppKit이 그 자리에서 이벤트 루프를 돌리는데, 주 큐는 재진입해 비워지지 않아
+                // 복구 완료·2초 시간 제한 블록이 영영 실행되지 않고 앱이 종료 대기에 멈춘다(05-11 UAT C4).
+                // 런루프 블록으로 넘기면 ⌘Q와 같은 자리에서 실행된다.
+                CFRunLoopPerformBlock(CFRunLoopGetMain(), CFRunLoopMode.commonModes.rawValue) {
+                    NSApp.terminate(nil)
+                }
+                CFRunLoopWakeUp(CFRunLoopGetMain())
             } catch let failure as Failure {
                 if let workspace { try? FileManager.default.removeItem(at: workspace) }
                 await MainActor.run { completion(failure) }

@@ -202,6 +202,18 @@ public struct KeyLists: Equatable, Codable, Sendable {
         return base.with(.fn, base.fn + [english])
     }
 
+    /// 저장된 목록이 없을 때의 첫 목록. 옛 설정(capsSourceID, fnCycleOrder)이 하나도 없으면 새 설치이므로
+    /// `initial`을, 있으면 `migrated`를 쓴다. 0.9.0은 새 설치에도 `migrated`를 써서 처음 설정의
+    /// 「권장 1」이 「사용 중」으로 나왔다(05-11 UAT B5).
+    public static func first(
+        sources: [SourceInfo], legacyCapsSourceID: SourceID?, legacyFnModeKeys: [String]?,
+        legacyEntry: EntryLanguage = .next
+    ) -> KeyLists {
+        if legacyCapsSourceID == nil, legacyFnModeKeys == nil { return initial(for: sources) }
+        return migrated(sources: sources, legacyCapsSourceID: legacyCapsSourceID,
+                        legacyFnModeKeys: legacyFnModeKeys, legacyEntry: legacyEntry)
+    }
+
     /// 옛 설정(capsSourceID, fnCycleOrder, outsideRule)을 새 목록으로 옮긴다. 옛 키는 지우지 않는다.
     /// D-03: entry가 없는 새 설치는 legacyEntry를 두 키에 채운다(없으면 `.next`).
     public static func migrated(

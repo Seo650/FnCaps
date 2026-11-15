@@ -39,6 +39,20 @@ import Testing
         #expect(l.fn == [Fx.ko2.id, Fx.ja.id, Fx.abc.id])
     }
 
+    /// 05-11 UAT B5: 새 설치(옛 설정 없음)는 initial을 쓴다. 권장 1과 겹치지 않는다.
+    @Test func firstWithoutLegacyIsInitial() {
+        let srcs = [Fx.abc, Fx.ko2, Fx.ja]
+        let l = KeyLists.first(sources: srcs, legacyCapsSourceID: nil, legacyFnModeKeys: nil)
+        #expect(l == KeyLists.initial(for: srcs))
+        #expect(l.fn == [Fx.ko2.id, Fx.ja.id, Fx.abc.id])
+    }
+
+    @Test func firstWithLegacyIsMigrated() {
+        let srcs = [Fx.abc, Fx.ko2, Fx.ja]
+        let l = KeyLists.first(sources: srcs, legacyCapsSourceID: Fx.abc.id, legacyFnModeKeys: nil)
+        #expect(l == KeyLists.migrated(sources: srcs, legacyCapsSourceID: Fx.abc.id, legacyFnModeKeys: nil))
+    }
+
     @Test func initialWithoutForeignDoesNotDuplicate() {
         let l = KeyLists.initial(for: [Fx.abc])
         #expect(l.fn == [])
