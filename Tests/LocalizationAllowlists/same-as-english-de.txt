@@ -1,0 +1,9 @@
+# 독일어(de) — 영어와 같은 값으로 두는 키와 이유
+# 형식: <key> = <이유>   (brand / symbol / cognate: <근거>)
+# de는 de.lproj/Localizable.strings에서 확인한 값만 적는다.
+
+keys.fn.title = symbol
+sidebar.header.version = cognate: 독일어에서도 Version이 표준 표기
+general.group.system = cognate: 독일어에서도 System이 표준 표기
+about.update.group = cognate: 독일어에서도 Updates가 표준 표기
+report.done.ok = cognate: 독일어에서도 OK가 표준 표기

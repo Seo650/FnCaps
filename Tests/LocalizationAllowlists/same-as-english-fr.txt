@@ -1,0 +1,7 @@
+# 프랑스어(fr) — 영어와 같은 값으로 두는 키와 이유
+# 형식: <key> = <이유>   (brand / symbol / cognate: <근거>)
+# fr은 fr.lproj/Localizable.strings에서 확인한 값만 적는다.
+
+keys.fn.title = symbol
+sidebar.header.version = cognate: 프랑스어에서도 Version이 표준 표기
+report.message.title = cognate: 프랑스어에서도 Message가 표준 표기

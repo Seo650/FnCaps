@@ -1,0 +1,3 @@
+# uk 화면 문구에서 영어 값과 같게 남는 키.
+# 이유는 README의 세 가지(brand / symbol / cognate: <근거>)만 쓴다.
+keys.fn.title = symbol

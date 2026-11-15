@@ -1,0 +1,6 @@
+# 스페인어(es) — 영어와 같은 값으로 두는 키와 이유
+# 형식: <key> = <이유>   (brand / symbol / cognate: <근거>)
+# es는 es.lproj/Localizable.strings에서 확인한 값만 적는다.
+
+sidebar.general = cognate: 스페인어에서도 General이 표준 표기
+keys.fn.title = symbol
