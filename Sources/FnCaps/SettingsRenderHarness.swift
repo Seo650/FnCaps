@@ -32,10 +32,13 @@ enum SettingsRenderHarness {
         let lang = Bundle.main.preferredLocalizations.first ?? "en"
         let fx = Fixtures(lang: lang)
         var scenes = makeScenes(fx)
+        var important = importantScenes(lang: lang)
         if let only = ProcessInfo.processInfo.environment["FNCAPS_RENDER_ONLY"], !only.isEmpty {
             let names = Set(only.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
             scenes = scenes.filter { names.contains($0.name) }
-            if scenes.isEmpty {
+            important = important.filter { names.contains($0.name) }
+            // 설정창 장면과 중요 업데이트 창 장면을 모두 걸러 낸 뒤에야 실패로 본다.
+            if scenes.isEmpty && important.isEmpty {
                 fail("FNCAPS_RENDER_ONLY에 맞는 장면이 없습니다: \(only)")
                 return 1
             }
@@ -65,6 +68,15 @@ enum SettingsRenderHarness {
             if render(SettingsRootView(model: model, ui: ui, updates: updates, reports: reports),
                       ui: ui, scene: scene,
                       to: outputDir.appendingPathComponent(file)) {
+                written.append(file)
+            } else {
+                failed = true
+            }
+        }
+        // 중요 업데이트 창은 설정창과 폭이 다르다(DS.s(420)). 따로 그려 같은 목록에 이어 적는다.
+        for scene in important {
+            let file = "\(lang)-\(scene.name).png"
+            if renderImportant(scene, to: outputDir.appendingPathComponent(file)) {
                 written.append(file)
             } else {
                 failed = true
@@ -105,6 +117,94 @@ enum SettingsRenderHarness {
         rep.size = size
         view.cacheDisplay(in: view.bounds, to: rep)
         guard rep.pixelsWide >= Int(DS.s(600) * 2),  // 처음 설정 장면 폭(600)까지 허용
+              let png = rep.representation(using: .png, properties: [:]), !png.isEmpty
+        else {
+            fail("렌더 실패(PNG 비었음 또는 폭 부족): \(scene.name)")
+            return false
+        }
+        do {
+            try png.write(to: url)
+            return true
+        } catch {
+            fail("쓰기 실패: \(scene.name) \(error)")
+            return false
+        }
+    }
+
+    // MARK: 중요 업데이트 창(REL-05, 06-02)
+
+    private struct ImportantScene {
+        let name: String
+        let dark: Bool
+        let phase: UpdateController.Phase
+        let offerText: String
+    }
+
+    private static func importantScenes(lang: String) -> [ImportantScene] {
+        let offered = offeredText(lang: lang)
+        let available = UpdateController.Phase.done(
+            .available(version: "1.1", url: ExternalLinks.releasesLatest))
+        return [
+            ImportantScene(name: "update-important-offered-light", dark: false,
+                           phase: available, offerText: offered),
+            ImportantScene(name: "update-important-offered-dark", dark: true,
+                           phase: available, offerText: offered),
+            ImportantScene(name: "update-important-long-light", dark: false,
+                           phase: available, offerText: longText),
+            ImportantScene(name: "update-important-working", dark: false,
+                           phase: .downloading, offerText: offered),
+            ImportantScene(name: "update-important-failed", dark: false,
+                           phase: .installFailed(.download), offerText: offered),
+        ]
+    }
+
+    /// 렌더 전용 고정 안내 글(약 100~150자). `.lproj`에 넣지 않는다. 없는 언어는 영어로 되돌린다.
+    private static func offeredText(lang: String) -> String {
+        switch lang {
+        case "ko":
+            return "잠자기에서 깨어난 뒤 FnCaps를 다시 시작할 때까지 Caps Lock 전환이 멈출 수 있던 문제를 고쳤습니다. 설치하면 해결됩니다."
+        case "fr":
+            return "Corrigé : après le réveil du Mac, le changement avec Verr. Maj pouvait cesser de fonctionner jusqu’au redémarrage de FnCaps. Cette mise à jour règle le problème."
+        default:
+            return "Fixed an issue where switching with Caps Lock could stop working after your Mac woke from sleep until FnCaps was restarted. This update resolves it."
+        }
+    }
+
+    /// 4000자 상한(D-19-6)을 채운 고정 영어 글. 상자가 DS.s(160)에 머물고 안에서 스크롤하는지 본다.
+    private static let longText: String = {
+        let sentence = "This long note checks that the note box scrolls inside and the window stops growing at the height limit. "
+        var text = ""
+        while text.count < ImportantNotice.maxLength + 200 { text += sentence }
+        return ImportantNotice.clean(text)
+    }()
+
+    private static func renderImportant(_ scene: ImportantScene, to url: URL) -> Bool {
+        let updates = UpdateController(defaults: nil, fetch: { _ in throw URLError(.notConnectedToInternet) })
+        updates.debugSet(phase: scene.phase, lastChecked: fixedCheckTime)
+        let offer = ImportantOffer(version: "1.1", text: scene.offerText)
+        // 실제 창은 NSWindow가 바탕을 칠한다. 화면 밖 렌더에는 창이 없으므로 같은 바탕을 깔아 준다.
+        let content = ImportantUpdateView(updates: updates, offer: offer, close: {})
+            .background(Color(nsColor: .windowBackgroundColor))
+        let view = NSHostingView(rootView: content)
+        let width = DS.s(420)
+        view.frame = NSRect(x: 0, y: 0, width: width, height: DS.s(300))
+        view.appearance = NSAppearance(named: scene.dark ? .darkAqua : .aqua)
+        settle(view)
+        let size = NSSize(width: width, height: max(view.fittingSize.height, DS.s(1)))
+        view.frame = NSRect(origin: .zero, size: size)
+        settle(view)
+
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: Int(size.width * 2), pixelsHigh: Int(size.height * 2),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else {
+            fail("렌더 실패(비트맵 없음): \(scene.name)")
+            return false
+        }
+        rep.size = size
+        view.cacheDisplay(in: view.bounds, to: rep)
+        guard rep.pixelsWide >= Int(DS.s(420) * 2),
               let png = rep.representation(using: .png, properties: [:]), !png.isEmpty
         else {
             fail("렌더 실패(PNG 비었음 또는 폭 부족): \(scene.name)")

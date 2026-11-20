@@ -208,6 +208,11 @@
 "about.update.rateLimited" = "Не удалось проверить: достигнут лимит запросов GitHub";
 "about.update.checkNow" = "Проверить сейчас";
 "about.update.open" = "Обновить";
+
+"update.important.title" = "Важное обновление";
+"update.important.version" = "Доступна версия FnCaps %1$@. У вас версия %2$@.";
+"update.important.later" = "Позже";
+"update.important.updateNow" = "Обновить сейчас";
 "about.update.downloading" = "Загрузка…";
 "about.update.verifying" = "Проверка целостности…";
 "about.update.installing" = "Установка…";

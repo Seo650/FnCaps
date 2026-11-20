@@ -208,6 +208,11 @@
 "about.update.rateLimited" = "Не вдалося перевірити: вичерпано ліміт запитів GitHub";
 "about.update.checkNow" = "Перевірити зараз";
 "about.update.open" = "Оновити";
+
+"update.important.title" = "Важливе оновлення";
+"update.important.version" = "Доступна версія FnCaps %1$@. У вас версія %2$@.";
+"update.important.later" = "Пізніше";
+"update.important.updateNow" = "Оновити зараз";
 "about.update.downloading" = "Завантаження…";
 "about.update.verifying" = "Перевірка цілісності…";
 "about.update.installing" = "Встановлення…";

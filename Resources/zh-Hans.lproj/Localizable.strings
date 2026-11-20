@@ -207,6 +207,11 @@
 "about.update.rateLimited" = "无法检查：已达到GitHub请求上限";
 "about.update.checkNow" = "立即检查";
 "about.update.open" = "更新";
+
+"update.important.title" = "重要更新";
+"update.important.version" = "FnCaps %1$@ 已发布。当前版本为 %2$@。";
+"update.important.later" = "稍后";
+"update.important.updateNow" = "立即更新";
 "about.update.downloading" = "正在下载…";
 "about.update.verifying" = "正在验证…";
 "about.update.installing" = "正在安装…";

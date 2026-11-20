@@ -4,7 +4,7 @@
 
 FnCaps es una app de barra de menús para macOS pensada para quien usa tres o más fuentes de entrada y encuentra lento el cambio entre ellas.
 
-macOS ofrece una sola tecla que recorre todas las fuentes de entrada una tras otra. Con tres o más, hay que pulsar hasta que aparezca el idioma deseado, mirar la barra de menús y volver a pulsar.
+macOS ofrece una sola tecla que recorre todas las fuentes de entrada una tras otra. Con tres o más, hay que pulsarla una y otra vez hasta que aparezca el idioma deseado, y si te pasas de uno, hay que dar otra vuelta completa.
 
 FnCaps reparte las fuentes de entrada entre dos teclas: Caps Lock y fn (🌐).
 
@@ -80,7 +80,6 @@ FnCaps no registra lo que escribe. Se conecta a Internet en dos casos.
 - Control+Space: no cambia de fuente de entrada mientras FnCaps está activada. Vuelve a funcionar al desactivar o cerrar FnCaps.
 - Luz de Caps Lock: al activar Bloqueo Mayúsculas manteniendo pulsada la tecla, la luz de la tecla permanece apagada. Las mayúsculas se escriben con normalidad.
 - Indicador de idioma: al pulsar las teclas rápido, el pequeño indicador que macOS muestra junto al cursor puede mostrar un idioma distinto del que se está usando. La barra de menús muestra el correcto.
-- Carácter en composición: si un carácter coreano, japonés o chino todavía se está componiendo al pulsar fn, ese carácter puede perderse.
 - Distribución inglesa: FnCaps trata ABC y U.S. como inglés. ABC – AZERTY y ABC – QWERTZ cuentan como francés y alemán.
 - Karabiner-Elements y gksdud: estas apps cambian las mismas teclas. Una regla de Karabiner que use `caps_lock` toma la tecla antes de que FnCaps la vea. FnCaps muestra un aviso mientras una de ellas está en ejecución.
 - Sin probar, se espera que funcione: desconectar y volver a conectar un teclado externo, macOS 14 a 26 y Macs distintos de un MacBook Air con Apple silicon.

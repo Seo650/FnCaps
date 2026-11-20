@@ -208,6 +208,10 @@
 "about.update.rateLimited" = "GitHub 요청 한도에 걸려 확인하지 못했습니다";
 "about.update.checkNow" = "지금 확인";
 "about.update.open" = "업데이트";
+"update.important.title" = "중요 업데이트";
+"update.important.version" = "FnCaps %1$@ 버전이 나왔습니다. 지금 버전은 %2$@입니다.";
+"update.important.later" = "나중에";
+"update.important.updateNow" = "지금 업데이트";
 "about.update.downloading" = "내려받는 중…";
 "about.update.verifying" = "검사 중…";
 "about.update.installing" = "설치 중…";

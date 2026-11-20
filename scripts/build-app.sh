@@ -74,6 +74,12 @@ BIN="$(swift build -c "$CONFIG" "${ARCH_FLAGS[@]}" -Xlinker -platform_version -X
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp "$BIN" "$APP/Contents/MacOS/$PRODUCT"
+# 링커가 남기는 디버그 기호(SO·OSO)에 빌드한 Mac의 절대 경로가 들어간다. 공개 바이너리에 개인
+# 경로를 남기지 않으려고 번들 사본에서만 지운다(REL-04). 전역 기호는 남으므로 충돌 기록의 함수
+# 이름은 그대로다. .build 안의 원본 바이너리는 건드리지 않는다. 서명 전에 해야 한다.
+if [ "$CONFIG" = "release" ]; then
+  strip -S "$APP/Contents/MacOS/$PRODUCT"
+fi
 cp "$PLIST" "$APP/Contents/Info.plist"
 # 시험용 번들 버전. Resources/ 원본 plist는 바꾸지 않는다.
 if [ -n "$VERSION_OVERRIDE" ]; then

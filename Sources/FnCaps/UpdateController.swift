@@ -1,4 +1,6 @@
+// 구조 참고: Sparkle SPUUpdater scheduleNextUpdateCheck (MIT)
 import AppKit
+import Dispatch
 import FnCapsCore
 
 /// 업데이트 확인(D-38). 앱에서 네트워크를 쓰는 곳은 여기 한 곳뿐이다.
@@ -20,6 +22,9 @@ final class UpdateController: ObservableObject {
     @Published private(set) var phase: Phase = .idle
     @Published private(set) var autoCheck: Bool
     @Published private(set) var lastChecked: Date?
+    /// 자동 확인에서 중요 표시가 있는 릴리스를 찾았을 때의 창 값(D-14~D-16). 정기 확인마다 새로 넣는다.
+    /// 버전을 저장하는 defaults 키는 두지 않는다(D-19-1: 다시 알림은 정기 확인 주기가 정한다).
+    @Published private(set) var importantOffer: ImportantOffer?
 
     private enum Key {
         static let autoCheck = "update.autoCheck"
@@ -32,8 +37,8 @@ final class UpdateController: ObservableObject {
     /// nil이면 메모리에만 둔다(렌더 도구용).
     private let defaults: UserDefaults?
     private let fetch: Fetch
-    private var firstTimer: Timer?
-    private var repeatTimer: Timer?
+    /// 자동 확인 타이머. 마지막 확인 + 하루에 한 번 울리는 벽시계 일회성 타이머 하나뿐이다(D-11).
+    private var checkTimer: DispatchSourceTimer?
     /// 진행 중인 설치. 한 번에 하나만 둔다(T-05-15).
     private var installer: UpdateInstaller?
 
@@ -113,17 +118,22 @@ final class UpdateController: ObservableObject {
 
     // MARK: 확인
 
-    /// 수동 확인. 진행 중이면 무시한다(T-04-46, T-05-15).
-    func checkNow() {
+    /// 수동 「지금 확인」. 창을 열지 않는다(사용자가 이미 정보 쪽을 보고 있다, UI-SPEC 열기 규칙 1).
+    func checkNow() { runCheck(automatic: false) }
+
+    /// 확인 한 번. automatic이면 결과에 중요 표시가 있을 때 중요 업데이트 창을 낸다(D-14, D-17).
+    private func runCheck(automatic: Bool) {
         if isBusy { return }
         phase = .checking
         let fetch = self.fetch
         let version = Self.currentVersion
         Task {
-            let outcome = await UpdateCheck.run(
+            let result = await UpdateCheck.check(
                 owner: ExternalLinks.repoOwner, repo: ExternalLinks.repoName,
                 appVersion: version, fetch: fetch)
-            await MainActor.run { self.apply(outcome) }
+            await MainActor.run {
+                self.apply(result.outcome, body: result.releaseBody, automatic: automatic)
+            }
         }
     }
 
@@ -167,9 +177,10 @@ final class UpdateController: ObservableObject {
         })
     }
 
-    private func apply(_ outcome: UpdateOutcome) {
-        // 성공한 확인만 「마지막 확인」으로 남긴다. 실패·요청 한도면 남기지 않아 한 시간 타이머가
-        // 다시 묻는다(로그인 직후 네트워크 없음으로 24시간 멈추던 문제, 04-REVIEW WR-03).
+    private func apply(_ outcome: UpdateOutcome, body: String?, automatic: Bool) {
+        // 성공한 확인만 「마지막 확인」으로 남긴다. 실패·요청 한도면 남기지 않는다. 실패해도 바로 다시 묻지
+        // 않고 하루 뒤에 묻는다(D-11). 로그인 직후 네트워크 없음으로 멈추지 않게 하려면 이 재예약이 필요하다
+        // (04-REVIEW WR-03의 한 시간 재시도를 대체).
         switch outcome {
         case .upToDate, .available, .noRelease:
             let now = Date()
@@ -201,29 +212,73 @@ final class UpdateController: ObservableObject {
         defaults?.set(result, forKey: Key.lastResult)
         // URL, 헤더, 응답 본문은 남기지 않는다(T-04-45).
         AppLog.info("update check result=\(result) latest=\(UpdateCheckLog.safe(latest))")
+        // 성공·실패 모두 지금부터 하루 뒤로 다시 건다. Sparkle usingCurrentDate:NO와 같다(D-11).
+        scheduleNextCheck(after: UpdateCheck.interval)
+        // 자동 확인(타이머)이고 중요 표시가 있으면 창 값을 넣는다. 같은 값이어도 확인마다 한 번 넣는다
+        // (한 번의 정기 확인에 많아야 한 번, D-19-1). 안내 글 원문은 로그에 남기지 않는다(T-06-12).
+        if automatic, case .available(let version, _) = outcome {
+            let language = Bundle.main.preferredLocalizations.first ?? "en"
+            if let offer = ImportantNotice.offer(body: body, latest: version,
+                                                  currentVersion: Self.currentVersion,
+                                                  language: language) {
+                importantOffer = offer
+                AppLog.info("update important offer version=\(UpdateCheckLog.safe(version))")
+            }
+        }
+    }
+
+    /// 중요 업데이트 창을 닫을 때 값도 지운다. 다음 정기 확인에서 다시 판정한다(D-19-1).
+    func clearImportantOffer() {
+        importantOffer = nil
     }
 
     func setAutoCheck(_ on: Bool) {
         autoCheck = on
         defaults?.set(on, forKey: Key.autoCheck)
-        if on { checkIfDue() }
+        // 켜면 lastChecked 기준으로 다시 걸고, 끄면 아래 off 분기에서 타이머만 없어진다(D-11).
+        // 켠 직후의 확인은 창을 열지 않는다(UI-SPEC 열기 규칙 1).
+        scheduleNextCheck(after: UpdateCheck.nextCheckDelay(lastChecked: lastChecked, now: Date()),
+                          offerImportant: false)
     }
 
-    /// 앱 시작 뒤 10초에 한 번, 그 뒤 한 시간마다 확인할 때인지 본다. 하루 1번은 isDue가 정한다.
+    /// lastChecked + 하루에 벽시계 일회성 타이머 하나(D-11). 그 시각이 이미 지났으면 바로 확인한다.
     func startAutomatic() {
-        firstTimer?.invalidate()
-        repeatTimer?.invalidate()
-        firstTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
-            self?.checkIfDue()
-        }
-        repeatTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
-            self?.checkIfDue()
-        }
+        scheduleNextCheck(after: UpdateCheck.nextCheckDelay(lastChecked: lastChecked, now: Date()))
     }
 
-    func checkIfDue() {
-        if UpdateCheck.isDue(lastChecked: lastChecked, now: Date(), autoEnabled: autoCheck) {
-            checkNow()
+    /// 다음 확인까지 delay초 뒤에 울리는 타이머를 하나만 둔다. 걸린 타이머는 먼저 없앤다.
+    /// offerImportant가 거짓이면 바로 확인하더라도 중요 업데이트 창을 열지 않는다.
+    private func scheduleNextCheck(after delay: TimeInterval, offerImportant: Bool = true) {
+        dispatchPrecondition(condition: .onQueue(.main))
+        checkTimer?.cancel()
+        checkTimer = nil
+        guard autoCheck else {
+            AppLog.info("update schedule off")
+            return
+        }
+        if delay <= 0 {
+            AppLog.info("update schedule in=0s")
+            fireScheduledCheck(offerImportant: offerImportant)
+            return
+        }
+        // 벽시계 기준이라 잠자는 시간도 센다. 깨어날 때 시각이 지났으면 바로 확인이 돈다(REL-03).
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(wallDeadline: .now() + delay, repeating: .never, leeway: .seconds(30))
+        // 타이머가 울린 확인은 항상 창 열기 대상이다.
+        timer.setEventHandler { [weak self] in self?.fireScheduledCheck() }
+        timer.resume()
+        checkTimer = timer
+        AppLog.info("update schedule in=\(Int(delay))s")
+    }
+
+    /// 타이머가 울렸을 때. 진행 중인 확인·설치와 겹치면 새 요청 없이 하루 뒤로 다시 건다(edge REL-03 concurrency).
+    private func fireScheduledCheck(offerImportant: Bool = true) {
+        checkTimer?.cancel()
+        checkTimer = nil
+        if isBusy {
+            scheduleNextCheck(after: UpdateCheck.interval)
+        } else {
+            runCheck(automatic: offerImportant)
         }
     }
 
@@ -304,6 +359,9 @@ final class UpdateController: ObservableObject {
         self.phase = phase
         self.lastChecked = lastChecked
     }
+
+    /// DEBUG 중요 업데이트 창 실행 전용. 자동 확인 경로를 한 번 돌린다(D-19-5).
+    func debugRunAutomaticCheck() { runCheck(automatic: true) }
     #endif
 }
 

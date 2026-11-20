@@ -4,7 +4,7 @@
 
 FnCaps est une application de barre des menus pour macOS destinée à ceux qui utilisent trois sources de saisie ou plus et trouvent le passage de l'une à l'autre lent.
 
-macOS offre une seule touche qui parcourt toutes les sources de saisie l'une après l'autre. Avec trois sources ou plus, vous appuyez jusqu'à ce que la langue voulue apparaisse, vérifiez la barre des menus, puis appuyez encore.
+macOS offre une seule touche qui parcourt toutes les sources de saisie l'une après l'autre. Avec trois sources ou plus, il faut appuyer encore et encore jusqu'à ce que la langue voulue apparaisse, et si vous la dépassez d'un cran, il faut refaire tout le tour.
 
 FnCaps répartit vos sources de saisie entre deux touches, Caps Lock et fn (🌐).
 
@@ -80,7 +80,6 @@ FnCaps n'enregistre pas ce que vous tapez. Elle se connecte à internet dans deu
 - Control+Space : ne change pas de source de saisie tant que FnCaps est active. Cela fonctionne à nouveau lorsque FnCaps est désactivée ou quittée.
 - Voyant de Caps Lock : lorsque vous activez Caps Lock en maintenant la touche, le voyant de la touche reste éteint. Les majuscules sont saisies normalement.
 - Indicateur de langue : lorsque vous appuyez vite sur les touches, le petit indicateur que macOS affiche près du curseur peut indiquer une autre langue que celle en cours. La barre des menus indique la bonne.
-- Caractère en cours de composition : si un caractère coréen, japonais ou chinois est encore en cours de composition lorsque vous appuyez sur fn, ce caractère peut être perdu.
 - Disposition anglaise : FnCaps traite ABC et U.S. comme de l'anglais. ABC – AZERTY et ABC – QWERTZ comptent comme du français et de l'allemand.
 - Karabiner-Elements et gksdud : ces applications modifient les mêmes touches. Une règle Karabiner qui utilise `caps_lock` prend la touche avant que FnCaps ne la voie. FnCaps affiche un avertissement tant que l'une d'elles est en cours d'exécution.
 - Non testé, censé fonctionner : débrancher et rebrancher un clavier externe, macOS 14 à 26, et des Macs autres qu'un MacBook Air Apple silicon.

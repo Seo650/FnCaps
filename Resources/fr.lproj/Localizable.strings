@@ -208,6 +208,11 @@
 "about.update.rateLimited" = "Vérification impossible : limite de requêtes GitHub atteinte";
 "about.update.checkNow" = "Vérifier maintenant";
 "about.update.open" = "Mettre à jour";
+
+"update.important.title" = "Mise à jour importante";
+"update.important.version" = "FnCaps %1$@ est disponible. Vous avez la version %2$@.";
+"update.important.later" = "Plus tard";
+"update.important.updateNow" = "Mettre à jour maintenant";
 "about.update.downloading" = "Téléchargement…";
 "about.update.verifying" = "Validation…";
 "about.update.installing" = "Installation…";

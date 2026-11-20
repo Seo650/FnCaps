@@ -4,7 +4,7 @@
 
 FnCaps ist eine Menüleisten-App für macOS für alle, die drei oder mehr Eingabequellen verwenden und das Wechseln zwischen ihnen als langsam empfinden.
 
-macOS bietet eine Taste, die alle Eingabequellen nacheinander durchläuft. Bei drei oder mehr drücken Sie so lange, bis die gewünschte Sprache erscheint, prüfen die Menüleiste und drücken erneut.
+macOS bietet eine Taste, die alle Eingabequellen nacheinander durchläuft. Bei drei oder mehr müssen Sie sie immer wieder drücken, bis die gewünschte Sprache erscheint, und wenn Sie eine zu weit gehen, müssen Sie die ganze Runde noch einmal drehen.
 
 FnCaps verteilt Ihre Eingabequellen auf zwei Tasten, Caps Lock und fn (🌐).
 
@@ -80,7 +80,6 @@ FnCaps zeichnet nicht auf, was Sie tippen. Es verbindet sich in zwei Fällen mit
 - Control+Space: wechselt die Eingabequelle nicht, solange FnCaps eingeschaltet ist. Es funktioniert wieder, wenn FnCaps ausgeschaltet oder beendet wird.
 - Caps-Lock-Leuchte: Wenn Sie Caps Lock durch Halten der Taste einschalten, bleibt die Leuchte auf der Taste aus. Großbuchstaben werden normal eingegeben.
 - Sprachindikator: Wenn Sie die Tasten schnell drücken, kann der kleine Indikator, den macOS neben dem Cursor anzeigt, eine andere Sprache zeigen als die verwendete. Die Menüleiste zeigt die richtige.
-- Zeichen im Aufbau: Wenn beim Drücken von fn noch ein koreanisches, japanisches oder chinesisches Zeichen zusammengesetzt wird, kann dieses Zeichen verloren gehen.
 - Englisches Layout: FnCaps behandelt ABC und U.S. als Englisch. ABC – AZERTY und ABC – QWERTZ zählen als Französisch und Deutsch.
 - Karabiner-Elements und gksdud: Diese Apps ändern dieselben Tasten. Eine Karabiner-Regel, die `caps_lock` verwendet, nimmt die Taste an sich, bevor FnCaps sie sieht. FnCaps zeigt eine Warnung, solange eine der beiden läuft.
 - Nicht getestet, erwartet funktionsfähig: das Trennen und erneute Anschließen einer externen Tastatur, macOS 14 bis 26 und Macs außer einem MacBook Air mit Apple silicon.

@@ -57,6 +57,11 @@ final class CapsController {
     private var recoveryGeneration = 0
     /// 깨어남 재조정이 정책을 다시 계산하게 한다. 모델이 recompute를 건다.
     var onRecover: (() -> Void)?
+    /// #60 상실 자가 복구. Caps 펄스 시간 초과만 계수한다(사용자 결정 2026-11-16: 조용히 다시 적용,
+    /// 1초 조정 틱에서는 #60을 읽지 않음).
+    private var selfHeal = HotkeySelfHeal()
+    /// 앱 안 대체 전환이 끝난 뒤에 읽고 쓰려고 확인을 미룬다.
+    private static let selfHealDelay: TimeInterval = 1
 
     init(tap: FnTap, service: SwitchService, globe: RealGlobeStrategy?, defaults: UserDefaults, log: @escaping (String) -> Void) {
         self.tap = tap
@@ -67,6 +72,7 @@ final class CapsController {
             defaults: defaults, prefs: SymbolicHotkeyWriter.live, now: { ProcessInfo.processInfo.systemUptime })
         mappings = KeyMappingManager(defaults: defaults, bootSession: KeyboardMapper.bootSession())
         globe?.capsLockState = { [capsLock] in capsLock.isOn() }
+        globe?.onPulseWait = { [weak self] landed in self?.notePulseWait(landed: landed) }
         // 앞 앱이 바뀌면 우연한 잠금 변경을 막으려고 취소한다(T-03-16).
         activateObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
@@ -192,6 +198,51 @@ final class CapsController {
             }
         }
         updateTimer()
+    }
+
+    // MARK: #60 자가 복구
+
+    /// 메인 큐. Caps 펄스가 OS에 닿았는지(F 키가 #60을 거쳤는지) 받는다.
+    private func notePulseWait(landed: Bool) {
+        if landed {
+            selfHeal.noteLanded()
+            return
+        }
+        guard lastResult == .full, !gate.terminating else { return }
+        if selfHeal.noteTimeout(at: now) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.selfHealDelay) { [weak self] in
+                self?.runSelfHealCheck()
+            }
+        }
+    }
+
+    /// 예약한 확인. #60이 우리 값이 아니면 기존 조정 경로(#60 → activate → 매핑)로 다시 적용한다.
+    /// #60을 새 길로 직접 쓰지 않는다(T-dvj-03). 읽지 못했거나 지금 손댈 수 없으면 쓰지 않는다.
+    private func runSelfHealCheck() {
+        guard !gate.terminating, !gate.busy, lastResult == .full, !service.isSwitching, let key = appliedKey else {
+            selfHeal.skipCheck()
+            return
+        }
+        let ours = SymbolicHotkeyWriter.live.read().map {
+            ShortcutOwnership.isOurs(entry: $0["60"] as? [String: Any], keyCode: key.keyCode)
+        }
+        switch selfHeal.checked(ours: ours, at: now) {
+        case .keep:
+            log("caps hotkey selfheal check=ours")
+        case .unreadable:
+            log("caps hotkey selfheal check=unreadable")
+        case .reapply:
+            // 키코드는 남기지 않는다(T-dvj-04).
+            log("caps hotkey selfheal check=notOurs result=reapply count=\(selfHeal.reapplies)")
+            // scheduleRecovery와 같은 길: 정책을 다시 계산하면 recompute → reconcile(target:) → gate.request →
+            // applyFull이 #60 → activate → 매핑 순서를 지킨다. ShortcutManager.apply가 지금 값(우리 값 아님)을
+            // 원래 값으로 백업한다.
+            failedAt = nil
+            lastResult = nil
+            onRecover?()
+        case .giveUp:
+            log("caps hotkey selfheal check=notOurs result=giveUp")
+        }
     }
 
     // MARK: 조정
@@ -362,6 +413,8 @@ final class CapsController {
     /// 순서: 매핑 → #60 → 탭의 F 키 분기 해제. 끄기, 되돌리기, 종료가 모두 이 길을 지난다(종료는 force).
     func restore(force: Bool, completion: @escaping (Bool) -> Void) {
         cancelLong()
+        // 끄기, 「원래대로 되돌리기」(「지금 복구」), 종료에서 다시 적용 한도를 처음으로 돌린다.
+        selfHeal.reset()
         lastResult = nil
         appliedKey = nil
         restoreCompletions.append(completion)

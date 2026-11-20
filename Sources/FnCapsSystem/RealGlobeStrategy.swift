@@ -201,6 +201,9 @@ public final class RealGlobeStrategy: SwitchStrategy {
     public var composingHint: (() -> Bool)?
     /// 홉의 둘째 다리 앞에서 부른다. 키 붙잡기 한도를 늘린다.
     public var onExtendHold: (() -> Void)?
+    /// Caps F 키 펄스를 OS가 처리했는지(#60이 살아 있는지). 참이면 착지, 거짓이면 시간 초과.
+    /// 메인 큐에서 부른다. fn 경로(🌐)는 #60을 거치지 않으므로 부르지 않는다.
+    public var onPulseWait: ((Bool) -> Void)?
 
     private static let layoutType = "TISTypeKeyboardLayout"
 
@@ -276,6 +279,7 @@ public final class RealGlobeStrategy: SwitchStrategy {
         ) { [weak self] landed, sincePostMs in
             guard let self else { return }
             self.step(caps, "wait leg=first id=\(hopID) landed=\(landed) timeoutMs=\(SignalTiming.perSignalLimitMs) sincePostMs=\(String(format: "%.1f", sincePostMs)) stableMs=0.0 current=\(Self.word(catalog.currentID()))")
+            self.onPulseWait?(landed)
             guard landed, let tsrc = catalog.tisSource(for: target.id), let hsrc = catalog.tisSource(for: hopID) else {
                 self.capsFallback(caps, target: target, origin: origin, catalog: catalog, plan: "hop",
                                   leg: "first", reason: landed ? "noSource" : "timeout", completion)
@@ -303,6 +307,7 @@ public final class RealGlobeStrategy: SwitchStrategy {
             for: id, catalog: catalog, timeoutMs: SignalTiming.perSignalLimitMs, stableMs: stableMs, start: postedAt
         ) { [weak self] landed, sincePostMs in
             self?.step(caps, "wait leg=\(leg) id=\(id) landed=\(landed) timeoutMs=\(SignalTiming.perSignalLimitMs) sincePostMs=\(String(format: "%.1f", sincePostMs)) stableMs=\(stableMs) current=\(Self.word(catalog.currentID()))")
+            self?.onPulseWait?(landed)
             if landed {
                 // 결과 시간은 판정 시각 기준이다.
                 completion(SwitchOutcome(tisLanded: true, tisLatencyMs: (CFAbsoluteTimeGetCurrent() - caps.pressedAt) * 1000, notes: "path=pulse plan=\(plan) trigger=\(caps.trigger)"))

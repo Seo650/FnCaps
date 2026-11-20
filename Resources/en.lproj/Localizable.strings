@@ -208,6 +208,10 @@
 "about.update.rateLimited" = "Couldn't check: GitHub request limit reached";
 "about.update.checkNow" = "Check Now";
 "about.update.open" = "Update";
+"update.important.title" = "Important Update";
+"update.important.version" = "FnCaps %1$@ is available. You have %2$@.";
+"update.important.later" = "Later";
+"update.important.updateNow" = "Update Now";
 "about.update.downloading" = "Downloading…";
 "about.update.verifying" = "Verifying…";
 "about.update.installing" = "Installing…";

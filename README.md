@@ -4,7 +4,7 @@ English | [한국어](README.ko.md) | [日本語](README.ja.md) | [简体中文]
 
 FnCaps is a menu bar app for macOS for anyone who uses three or more input sources and finds switching between them slow.
 
-macOS gives you one key that steps through every input source in turn. With three or more, you press until the language you want comes up, check the menu bar, and press again.
+macOS gives you one key that steps through every input source in turn. With three or more, you have to press it again and again until the language you want comes up, and if you go one past it, you have to go all the way around again.
 
 FnCaps splits your input sources between two keys, Caps Lock and fn (🌐).
 
@@ -80,7 +80,6 @@ FnCaps does not record what you type. It connects to the internet in two cases.
 - Control+Space: does not switch input sources while FnCaps is on. It works again when FnCaps is turned off or quit.
 - Caps Lock light: when you turn Caps Lock on by holding the key, the light on the key stays off. Capital letters are typed normally.
 - Language indicator: when you press the keys quickly, the small indicator macOS shows next to the cursor can show a different language from the one in use. The menu bar shows the right one.
-- Letter being composed: if a Korean, Japanese or Chinese character is still being composed when you press fn, that character can be lost.
 - English layout: FnCaps treats ABC and U.S. as English. ABC – AZERTY and ABC – QWERTZ count as French and German.
 - Karabiner-Elements and gksdud: these apps change the same keys. A Karabiner rule that uses `caps_lock` takes the key before FnCaps sees it. FnCaps shows a warning while one of them is running.
 - Not tested, expected to work: unplugging and reconnecting an external keyboard, macOS 14 to 26, and Macs other than an Apple silicon MacBook Air.

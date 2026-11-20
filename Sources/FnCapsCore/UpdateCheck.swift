@@ -30,6 +30,8 @@ struct GitHubRelease: Decodable {
     let draft: Bool?
     let prerelease: Bool?
     let assets: [Asset]?
+    /// 릴리스 노트 본문. 중요 업데이트 표시를 여기서 읽는다(D-15).
+    let body: String?
 
     struct Asset: Decodable {
         let name: String
@@ -119,12 +121,45 @@ public enum UpdateCheck {
         return now.timeIntervalSince(lastChecked) >= interval
     }
 
+    /// 다음 자동 확인까지 남은 초. 0이면 바로 확인한다(D-11, Sparkle scheduleNextUpdateCheck와 같은 계산).
+    /// 마지막 확인이 없거나 시계가 되돌아가 미래면 0이다. isDue와 같은 판정을 유지한다.
+    public static func nextCheckDelay(lastChecked: Date?, now: Date) -> TimeInterval {
+        guard let lastChecked, lastChecked <= now else { return 0 }
+        return max(0, interval - now.timeIntervalSince(lastChecked))
+    }
+
+    /// 확인 결과와 릴리스 노트 본문을 함께 돌려준다(D-15: 중요 표시를 본문에서 읽는다).
+    public struct CheckResult: Equatable, Sendable {
+        public let outcome: UpdateOutcome
+        /// 상태 200일 때만 응답의 `body`가 들어간다. 그 밖에는 nil.
+        public let releaseBody: String?
+
+        public init(outcome: UpdateOutcome, releaseBody: String?) {
+            self.outcome = outcome
+            self.releaseBody = releaseBody
+        }
+    }
+
     public static func run(owner: String, repo: String, appVersion: String,
                            fetch: (URLRequest) async throws -> (Data, URLResponse)) async -> UpdateOutcome {
+        await check(owner: owner, repo: repo, appVersion: appVersion, fetch: fetch).outcome
+    }
+
+    /// `run`과 같은 판정을 하면서, 200 응답의 본문도 같은 디코딩에서 꺼낸다.
+    public static func check(owner: String, repo: String, appVersion: String,
+                             fetch: (URLRequest) async throws -> (Data, URLResponse)) async -> CheckResult {
         let req = request(owner: owner, repo: repo, appVersion: appVersion)
         guard let (data, response) = try? await fetch(req),
-              let http = response as? HTTPURLResponse else { return .failed }
-        return evaluate(currentVersion: appVersion, status: http.statusCode, data: data, owner: owner, repo: repo)
+              let http = response as? HTTPURLResponse else {
+            return CheckResult(outcome: .failed, releaseBody: nil)
+        }
+        let outcome = evaluate(currentVersion: appVersion, status: http.statusCode, data: data,
+                               owner: owner, repo: repo)
+        // 본문은 200일 때만 의미가 있다(404·403·그 밖의 상태에는 릴리스가 없다).
+        let releaseBody = http.statusCode == 200
+            ? (try? JSONDecoder().decode(GitHubRelease.self, from: data))?.body
+            : nil
+        return CheckResult(outcome: outcome, releaseBody: releaseBody)
     }
 
     static func stripPrefix(_ tag: String) -> String {

@@ -8,8 +8,10 @@ import Testing
     private let repo = "FnCaps"
     private let fallback = URL(string: "https://github.com/seo650/FnCaps/releases/latest")!
 
-    private func body(tag: String, url: String) -> Data {
-        Data("{\"tag_name\":\"\(tag)\",\"html_url\":\"\(url)\",\"draft\":false,\"prerelease\":false}".utf8)
+    private func body(tag: String, url: String, body: String? = nil) -> Data {
+        var dict: [String: Any] = ["tag_name": tag, "html_url": url, "draft": false, "prerelease": false]
+        if let body { dict["body"] = body }
+        return try! JSONSerialization.data(withJSONObject: dict)
     }
 
     private func eval(current: String = "1.0", status: Int = 200, data: Data) -> UpdateOutcome {
@@ -144,6 +146,43 @@ import Testing
         #expect(!UpdateCheck.isDue(lastChecked: now.addingTimeInterval(-100 * 86_400), now: now, autoEnabled: false))
     }
 
+    // MARK: nextCheckDelay
+
+    @Test func nextCheckDelayWithoutLastCheckIsZero() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        #expect(UpdateCheck.nextCheckDelay(lastChecked: nil, now: now) == 0)
+    }
+
+    @Test func nextCheckDelayCountsDownFromLastCheck() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let last = now.addingTimeInterval(-23 * 3600)
+        #expect(UpdateCheck.nextCheckDelay(lastChecked: last, now: now) == 3600)
+    }
+
+    @Test func nextCheckDelayIsZeroWhenDueOrOverdue() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        #expect(UpdateCheck.nextCheckDelay(lastChecked: now.addingTimeInterval(-24 * 3600), now: now) == 0)
+        #expect(UpdateCheck.nextCheckDelay(lastChecked: now.addingTimeInterval(-100 * 86_400), now: now) == 0)
+    }
+
+    @Test func nextCheckDelayInTheFutureIsZero() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        #expect(UpdateCheck.nextCheckDelay(lastChecked: now.addingTimeInterval(3600), now: now) == 0)
+    }
+
+    /// 0이면 바로 확인한다는 뜻이므로 isDue와 같은 판정이어야 한다.
+    @Test func nextCheckDelayAgreesWithIsDue() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let offsets: [TimeInterval] = [0, -1, -3600, -23 * 3600, -24 * 3600, -25 * 3600, -100 * 86_400, 3600]
+        for offset in offsets {
+            let last = now.addingTimeInterval(offset)
+            #expect((UpdateCheck.nextCheckDelay(lastChecked: last, now: now) == 0)
+                == UpdateCheck.isDue(lastChecked: last, now: now, autoEnabled: true))
+        }
+        #expect((UpdateCheck.nextCheckDelay(lastChecked: nil, now: now) == 0)
+            == UpdateCheck.isDue(lastChecked: nil, now: now, autoEnabled: true))
+    }
+
     // MARK: run
 
     @Test func runUsesInjectedFetch() async {
@@ -167,5 +206,28 @@ import Testing
             (Data(), URLResponse(url: req.url!, mimeType: nil, expectedContentLength: 0, textEncodingName: nil))
         }
         #expect(outcome == .failed)
+    }
+
+    // MARK: check(본문 포함, D-15)
+
+    @Test func checkReturnsReleaseBodyOnSuccess() async {
+        let url = "https://github.com/seo650/FnCaps/releases/tag/v1.2.3"
+        let note = "## Important\n\nFixed a bug.\n\n<!-- fncaps:important below=1.2.3\nko: 고쳤습니다.\n-->"
+        let data = body(tag: "v1.2.3", url: url, body: note)
+        let result = await UpdateCheck.check(owner: owner, repo: repo, appVersion: "1.2.2") { req in
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (data, resp)
+        }
+        #expect(result.releaseBody == note)
+        #expect(result.outcome == .available(version: "1.2.3", url: URL(string: url)!))
+    }
+
+    @Test func checkWithoutReleaseHasNoBody() async {
+        let result = await UpdateCheck.check(owner: owner, repo: repo, appVersion: "1.0") { req in
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 404, httpVersion: nil, headerFields: nil)!
+            return (Data(), resp)
+        }
+        #expect(result.outcome == .noRelease)
+        #expect(result.releaseBody == nil)
     }
 }

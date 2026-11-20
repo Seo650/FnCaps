@@ -209,6 +209,11 @@
 "about.update.rateLimited" = "GitHubのリクエスト上限に達したため確認できませんでした";
 "about.update.checkNow" = "今すぐ確認";
 "about.update.open" = "アップデート";
+
+"update.important.title" = "重要なアップデート";
+"update.important.version" = "FnCaps %1$@ が利用可能です。現在のバージョンは %2$@ です。";
+"update.important.later" = "あとで";
+"update.important.updateNow" = "今すぐアップデート";
 "about.update.downloading" = "ダウンロード中…";
 "about.update.verifying" = "検証中…";
 "about.update.installing" = "インストール中…";

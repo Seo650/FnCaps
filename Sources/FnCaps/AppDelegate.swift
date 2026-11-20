@@ -8,6 +8,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var reports: ReportController!
     private var window: SettingsWindowController!
     private var statusItem: StatusItemController!
+    /// 자동 확인이 중요 표시를 찾았을 때 띄우는 창 하나(D-14, D-19-2). 시작 시각으로 포커스 규칙을 정한다.
+    private var importantWindow: ImportantUpdateWindowController!
 
     /// 로그인 자동 실행인지. 실행을 알리는 Apple 이벤트('oapp')의 keyAEPropData가 keyAELaunchedAsLogInItem이면
     /// 로그인 실행이다. 'oapp'이 아니거나 이벤트가 없으면 판단하지 않는다(nil). willFinish 시점에 이벤트가
@@ -35,8 +37,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         readLaunchEvent("did")
+        // 시작 시각 하나로 60초 활성화 예외를 정한다(D-19-2). 새 타이머는 만들지 않는다.
+        let launchedAt = Date()
         model = AppModel()
         updates = UpdateController(defaults: .standard)
+        importantWindow = ImportantUpdateWindowController(updates: updates, launchedAt: launchedAt)
         model.start()
         updates.startAutomatic()
         reports = ReportController(defaults: .standard)
@@ -44,7 +49,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window = SettingsWindowController(model: model, updates: updates, reports: reports)
         statusItem = StatusItemController(model: model, updates: updates, openSettings: { [weak self] page in
             // 메뉴가 닫힌 뒤에 연다. 메뉴 추적 중에 활성화하면 창이 뒤에 남을 때가 있다.
-            DispatchQueue.main.async { self?.window.show(page: page) }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                // 창이 열려 있으면 「새 버전」 줄은 그 창을 앞으로 가져온다(D-19-4). 줄 모양은 그대로다.
+                if page == .about, self.importantWindow.isOpen {
+                    self.importantWindow.bringToFront()
+                } else {
+                    self.window.show(page: page)
+                }
+            }
         })
         installMainMenu()
         // 처음 실행·재시작(재설정 버튼을 봐야 함)·직접 연 실행은 창을 띄운다. 로그인 자동 실행만 조용히 둔다.
