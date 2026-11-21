@@ -112,7 +112,6 @@
 "globe.notice" = "The 🌐 key setting differs from the recommended value";
 "globe.notice.more" = "Details";
 
-"longpress.noEnglish.note" = "The Caps Lock list has no English input source, so holding doesn't lock right now.";
 
 /* 04 재설계 */
 "memo.placeholder" = "Test input";
@@ -270,7 +269,6 @@
 "help.notes.globe" = "For “Press 🌐 key to”, “Change Input Source” is recommended. With that value, fields like Finder rename also switch instantly. Change it in System Settings > Keyboard.";
 "help.notes.globe.open" = "Open Keyboard Settings";
 "help.notes.indicator" = "Pressing fn several times fast can leave the indicator next to the cursor showing a different language. Typing normally still enters the correct language.";
-"help.notes.capsLight" = "Holding Caps Lock turns Caps Lock on, but its indicator light does not turn on yet. Capital letters are still typed normally. The light will be fixed in a later update.";
 "help.notes.secureInput" = "In a password field the language does not change, and holding Caps Lock does not turn on Caps Lock.";
 "sidebar.report" = "Report a Problem";
 "report.title" = "Report a Problem";

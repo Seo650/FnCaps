@@ -33,9 +33,9 @@ brew install --cask Seo650/tap/fncaps
 
 ### GitHub Releases
 
-1. Descargue el archivo `FnCaps-x.y.z.zip` más reciente desde [Releases](https://github.com/Seo650/FnCaps/releases/latest).
-2. Descomprímalo.
-3. Mueva `FnCaps.app` a `/Applications`.
+1. Descargue el archivo `FnCaps-x.y.z.dmg` más reciente desde [Releases](https://github.com/Seo650/FnCaps/releases/latest).
+2. Ábralo.
+3. Arrastre `FnCaps.app` a la carpeta `Applications`.
 
 ## Primer inicio
 
@@ -78,7 +78,6 @@ FnCaps no registra lo que escribe. Se conecta a Internet en dos casos.
 
 - Campos de contraseña: macOS mantiene los campos de contraseña en inglés, así que FnCaps no cambia de idioma ahí, y mantener pulsada Caps Lock no activa Bloqueo Mayúsculas.
 - Control+Space: no cambia de fuente de entrada mientras FnCaps está activada. Vuelve a funcionar al desactivar o cerrar FnCaps.
-- Luz de Caps Lock: al activar Bloqueo Mayúsculas manteniendo pulsada la tecla, la luz de la tecla permanece apagada. Las mayúsculas se escriben con normalidad.
 - Indicador de idioma: al pulsar las teclas rápido, el pequeño indicador que macOS muestra junto al cursor puede mostrar un idioma distinto del que se está usando. La barra de menús muestra el correcto.
 - Distribución inglesa: FnCaps trata ABC y U.S. como inglés. ABC – AZERTY y ABC – QWERTZ cuentan como francés y alemán.
 - Karabiner-Elements y gksdud: estas apps cambian las mismas teclas. Una regla de Karabiner que use `caps_lock` toma la tecla antes de que FnCaps la vea. FnCaps muestra un aviso mientras una de ellas está en ejecución.

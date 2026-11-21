@@ -33,9 +33,9 @@ brew install --cask Seo650/tap/fncaps
 
 ### GitHub Releases
 
-1. Download the latest `FnCaps-x.y.z.zip` from [Releases](https://github.com/Seo650/FnCaps/releases/latest).
-2. Unzip it.
-3. Move `FnCaps.app` to `/Applications`.
+1. Download the latest `FnCaps-x.y.z.dmg` from [Releases](https://github.com/Seo650/FnCaps/releases/latest).
+2. Open it.
+3. Drag `FnCaps.app` into the `Applications` folder.
 
 ## First launch
 
@@ -78,7 +78,6 @@ FnCaps does not record what you type. It connects to the internet in two cases.
 
 - Password fields: macOS keeps password fields in English, so FnCaps does not switch languages there, and holding Caps Lock does not turn on Caps Lock.
 - Control+Space: does not switch input sources while FnCaps is on. It works again when FnCaps is turned off or quit.
-- Caps Lock light: when you turn Caps Lock on by holding the key, the light on the key stays off. Capital letters are typed normally.
 - Language indicator: when you press the keys quickly, the small indicator macOS shows next to the cursor can show a different language from the one in use. The menu bar shows the right one.
 - English layout: FnCaps treats ABC and U.S. as English. ABC – AZERTY and ABC – QWERTZ count as French and German.
 - Karabiner-Elements and gksdud: these apps change the same keys. A Karabiner rule that uses `caps_lock` takes the key before FnCaps sees it. FnCaps shows a warning while one of them is running.

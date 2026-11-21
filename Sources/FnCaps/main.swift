@@ -14,6 +14,18 @@ if CommandLine.arguments.contains(UpdateHelper.argument) {
     exit(UpdateHelper.run(CommandLine.arguments))
 }
 
+// Caps 표시등 복구(`scripts/caps-recover.sh` 전용, D-04·D-07). 값 없는 인자 하나로 `Auto`만 쓰고 끝난다.
+// NSApplication·AppModel·매핑·#60을 만들지 않고, 뒤의 중복 실행 검사보다 앞이라 앱이 떠 있어도 돈다(T-07-02).
+if CommandLine.arguments.contains(CapsLed.releaseArgument) {
+    let led = CapsLed(log: { FileHandle.standardError.write(Data(($0 + "\n").utf8)) })
+    let written = led.release()
+    let line = written.map { "caps-led release services=\($0)" } ?? "caps-led release unsupported"
+    FileHandle.standardOutput.write(Data((line + "\n").utf8))
+    let result = written.map { $0 == 0 ? "none" : "ok" } ?? "unsupported"
+    AppLog.info("led release reason=cli services=\(written.map(String.init) ?? "-") result=\(result)")
+    exit(written == nil ? 1 : 0)
+}
+
 #if DEBUG
 // debug 전용 화면 밖 렌더 점검. release 바이너리에는 이 분기가 없다.
 if let i = CommandLine.arguments.firstIndex(of: "--render-settings"),

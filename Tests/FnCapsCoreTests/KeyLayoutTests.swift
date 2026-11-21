@@ -36,12 +36,6 @@ import Testing
         #expect(fnOnly.hasActiveList)
     }
 
-    @Test func capsHasEnglishNeedsBaseRoleInCapsList() {
-        #expect(ListFx.layout(caps: ["E"], fn: ["K"], rule: .nextAfterLast).capsHasEnglish)
-        #expect(!ListFx.layout(caps: ["K"], fn: ["E"], rule: .nextAfterLast).capsHasEnglish)
-        #expect(!KeyLayout.empty.capsHasEnglish)
-    }
-
     @Test func preservesListOrder() {
         let l = ListFx.layout(caps: ["K", "E"], fn: ["Z", "J"], rule: .nextAfterLast)
         #expect(l.sources(for: .caps) == ["K", "E"])

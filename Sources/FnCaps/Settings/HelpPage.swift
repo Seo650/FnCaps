@@ -133,7 +133,7 @@ struct HelpPage: View {
 
     // MARK: H4. 알아 둘 점 (D-12~D-16)
 
-    /// 설정 행 설명을 되풀이하지 않는 짧은 문단 다섯 개(D-04). 버튼은 🌐 항목의 키보드 설정 열기 하나만 둔다(2026-11-13).
+    /// 설정 행 설명을 되풀이하지 않는 짧은 문단 네 개(D-04, D-11). 버튼은 🌐 항목의 키보드 설정 열기 하나만 둔다(2026-11-13).
     /// 1개 언어 빈 상태에서도 보인다(UI-SPEC 표).
     private func notesBox() -> some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -148,8 +148,6 @@ struct HelpPage: View {
             .id(Self.globeAnchor)
             SettingsDivider()
             note(L("help.notes.indicator"))
-            SettingsDivider()
-            note(L("help.notes.capsLight"))
             SettingsDivider()
             note(L("help.notes.secureInput"))
         }

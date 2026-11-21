@@ -93,6 +93,18 @@ import Testing
         #expect(picked.sums == sums)
     }
 
+    /// 사람이 받는 배포가 DMG로 바뀌어도(quick 261121-gfc) 업데이터는 zip과 SHA256SUMS만 고른다.
+    @Test func pickAssetsIgnoresDiskImageAsset() throws {
+        let zip = asset(zipName, zipURLText, size: 12_345)
+        let sums = asset("SHA256SUMS", sumsURLText, size: 96)
+        let dmg = asset("FnCaps-0.9.0.dmg",
+                        "https://github.com/Seo650/FnCaps/releases/download/v0.9.0/FnCaps-0.9.0.dmg",
+                        size: 11_000_000)
+        let picked = try #require(pick(release([zip, sums, dmg])))
+        #expect(picked.zip == zip)
+        #expect(picked.sums == sums)
+    }
+
     @Test func pickAssetsRejectsDuplicateNames() {
         let zip = asset(zipName, zipURLText, size: 12_345)
         let sums = asset("SHA256SUMS", sumsURLText, size: 96)
@@ -175,6 +187,15 @@ import Testing
         #expect(UpdateVerification.expectedChecksum(sumsText: text, fileName: zipName) == hex)
         // 대상 파일이 없으면 nil.
         #expect(UpdateVerification.expectedChecksum(sumsText: text, fileName: "FnCaps-1.0.0.zip") == nil)
+    }
+
+    /// `SHA256SUMS`에 DMG 줄이 더해져도 zip 줄의 해시를 그대로 읽는다(quick 261121-gfc).
+    @Test func expectedChecksumIgnoresDiskImageLine() {
+        let zipHex = String(repeating: "e", count: 64)
+        let dmgHex = String(repeating: "f", count: 64)
+        let text = "\(zipHex)  \(zipName)\n\(dmgHex)  FnCaps-0.9.0.dmg\n"
+        #expect(UpdateVerification.expectedChecksum(sumsText: text, fileName: zipName) == zipHex)
+        #expect(UpdateVerification.expectedChecksum(sumsText: text, fileName: "FnCaps-0.9.0.dmg") == dmgHex)
     }
 
     @Test func expectedChecksumRejectsDuplicateAndEmpty() {

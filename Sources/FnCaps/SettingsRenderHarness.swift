@@ -659,7 +659,6 @@ enum SettingsRenderHarness {
             s.conflictDismissed = false
             // 렌더 프로세스의 실제 값(🌐 설정, 빈 키 배치)에 기대지 않게 고정한다.
             s.globeNotice = false
-            s.capsHasEnglish = true
             s.capsRows = [row(ID.abc)]
             s.fnRows = [row(ID.korean), row(ID.japanese), row(ID.pinyin)]
             // 장면마다 앞 장면의 스냅숏에서 시작하므로 새 필드도 여기서 되돌린다.
@@ -736,7 +735,6 @@ enum SettingsRenderHarness {
         func empty(_ s: inout AppSnapshot) {
             base(&s)
             s.capsRows = []
-            s.capsHasEnglish = false
             s.fnRows = [row(ID.korean)]
             s.unassignedRows = []
         }

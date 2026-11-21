@@ -113,7 +113,6 @@
 "globe.notice" = "🌐キーを押したときの設定が推奨と異なります";
 "globe.notice.more" = "詳細";
 
-"longpress.noEnglish.note" = "Caps Lockのリストに英語の入力ソースがないため、現在はロックしません。";
 
 /* 04 재설계 */
 "memo.placeholder" = "入力テスト";
@@ -272,7 +271,6 @@
 "help.notes.globe" = "「🌐キーを押して」は「入力ソースを変更」を推奨します。この値なら、Finderの名前変更のような入力欄でもすぐに切り替わります。システム設定 > キーボードで変更します。";
 "help.notes.globe.open" = "キーボード設定を開く";
 "help.notes.indicator" = "fnをすばやく何度も押すと、カーソル横の表示が実際の言語と異なることがあります。そのまま入力すると正しい言語で入力されます。";
-"help.notes.capsLight" = "Caps Lockを長押しして英大文字ロックをオンにしても、ランプはまだ点灯しません。大文字は通常どおり入力されます。ランプは今後のアップデートで修正する予定です。";
 "help.notes.secureInput" = "パスワード欄では、言語は切り替わらず、Caps Lockを長押ししても英大文字ロックはオンになりません。";
 "sidebar.report" = "問題を報告";
 "report.title" = "問題を報告";

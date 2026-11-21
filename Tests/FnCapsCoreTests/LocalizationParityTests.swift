@@ -44,6 +44,10 @@ import Testing
     }
 
     static let deletedKeys = [
+        // 2026-11-21 quick 261121-cle: 영어가 어느 목록에 있든 길게 누르기가 동작해 안내 문구를 지웠다.
+        "longpress.noEnglish.note",
+        // 2026-11-21 Phase 7: 표시등을 고쳐 한계 문구를 지웠다(D-11).
+        "help.notes.capsLight",
         // 2026-11-13: 「다른 언어 수」 접힘과 「모든 언어 최대 N번」 줄을 없앴다.
         "help.setup.others", "help.setup.count", "help.setup.recommended", "help.setup.max",
         "keys.caps.shortcutNote",
@@ -170,23 +174,21 @@ import Testing
         let all = try Self.all()
         let ko = ["표시등", "불빛", "두 번", "더블"]
         let ja = ["ランプ", "インジケータ", "ダブル", "2回"]
-        // D-12 4번: 「표시등」은 사용자가 요청한 문구다. 표시등을 고치면 키와 면제를 함께 지운다.
-        let capsLight = "help.notes.capsLight"
         // 04.4 UAT U-1(2026-11-14 사용자): 후보 상자별 말은 「탭 / 더블탭」으로 쓴다.
         // 「더블탭 정도는 누구나 아는 표현이라고 치자」. 「더블」·「ダブル」·「double」만 이 두 키에서 푼다.
         let doubleTapKeys: Set<String> = [
             "help.cand.press.two", "help.cand.caps.back", "help.cand.why.cycles"]
-        for (k, v) in all["ko"]! where k != capsLight {
+        for (k, v) in all["ko"]! {
             for w in ko where !(w == "더블" && doubleTapKeys.contains(k)) {
                 #expect(!v.contains(w), "ko \(k): \(w)")
             }
         }
-        for (k, v) in all["ja"]! where k != capsLight {
+        for (k, v) in all["ja"]! {
             for w in ja where !(w == "ダブル" && doubleTapKeys.contains(k)) {
                 #expect(!v.contains(w), "ja \(k): \(w)")
             }
         }
-        for (k, v) in all["en"]! where k != capsLight {
+        for (k, v) in all["en"]! {
             #expect(v.range(of: "\\bLED\\b", options: .regularExpression) == nil, "en \(k): LED")
             #expect(v.range(of: "indicator light", options: .caseInsensitive) == nil, "en \(k): indicator light")
             if !doubleTapKeys.contains(k) {

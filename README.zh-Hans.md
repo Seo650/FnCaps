@@ -33,9 +33,9 @@ brew install --cask Seo650/tap/fncaps
 
 ### GitHub Releases
 
-1. 从 [Releases](https://github.com/Seo650/FnCaps/releases/latest) 下载最新的 `FnCaps-x.y.z.zip`。
-2. 解压缩。
-3. 把 `FnCaps.app` 移到 `/Applications`。
+1. 从 [Releases](https://github.com/Seo650/FnCaps/releases/latest) 下载最新的 `FnCaps-x.y.z.dmg`。
+2. 打开。
+3. 把 `FnCaps.app` 拖到 `Applications` 文件夹。
 
 ## 首次启动
 
@@ -78,7 +78,6 @@ FnCaps 不会记录你输入的内容。它只在两种情况下连接互联网�
 
 - 密码栏：macOS 会让密码栏保持英文，因此 FnCaps 不会在那里切换语言，按住 Caps Lock 也不会打开 Caps Lock。
 - Control+Space：在 FnCaps 开启时不切换输入法。关闭或退出 FnCaps 后它会恢复工作。
-- Caps Lock 灯：通过按住按键打开 Caps Lock 时，键上的灯保持熄灭。大写字母仍会正常输入。
 - 语言指示器：快速按键时，macOS 在光标旁显示的小指示器可能显示的语言与正在使用的语言不同。菜单栏会显示正确的那一个。
 - 英文布局：FnCaps 把 ABC 和 U.S. 视为英文。ABC – AZERTY 和 ABC – QWERTZ 分别视为法文和德文。
 - Karabiner-Elements 和 gksdud：这些应用会更改相同的按键。使用 `caps_lock` 的 Karabiner 规则会在 FnCaps 看到按键之前将其取走。在其中一个应用运行时，FnCaps 会显示警告。

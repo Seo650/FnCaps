@@ -7,3 +7,6 @@ build/
 *.key
 *.cer
 dist/
+
+# 개발용 실험 기록(옛 ~/fncaps-spike). 이 Mac 전용이라 커밋하지 않는다.
+/spike/

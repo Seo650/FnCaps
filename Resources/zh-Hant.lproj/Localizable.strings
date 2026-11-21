@@ -112,7 +112,6 @@
 "globe.notice" = "「按下🌐︎鍵來」的設定與建議值不同";
 "globe.notice.more" = "詳細資訊";
 
-"longpress.noEnglish.note" = "Caps Lock列表中沒有英語輸入方式，因此目前按住不會鎖定。";
 
 "memo.placeholder" = "測試輸入";
 "menu.edit" = "編輯";
@@ -270,7 +269,6 @@
 "help.notes.globe" = "「按下🌐︎鍵來」建議使用「更改輸入方式」。設為該值時，Finder 重新命名等輸入欄位也會立即切換。可在系統設定 > 鍵盤中更改。";
 "help.notes.globe.open" = "打開鍵盤設定";
 "help.notes.indicator" = "快速連按 fn 多次時，游標旁的提示可能與實際語言不同。直接輸入會以正確的語言輸入。";
-"help.notes.capsLight" = "長按 Caps Lock 開啟大寫鎖定後，指示燈還不會亮起。大寫字母仍會正常輸入。指示燈將在後續更新中修正。";
 "help.notes.secureInput" = "在密碼欄中，語言不會切換，長按 Caps Lock 也不會開啟大寫鎖定。";
 "sidebar.report" = "回報問題";
 "report.title" = "回報問題";

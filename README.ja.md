@@ -33,9 +33,9 @@ brew install --cask Seo650/tap/fncaps
 
 ### GitHub Releases
 
-1. [Releases](https://github.com/Seo650/FnCaps/releases/latest)から最新の`FnCaps-x.y.z.zip`をダウンロードします。
-2. 解凍します。
-3. `FnCaps.app`を`/Applications`に移動します。
+1. [Releases](https://github.com/Seo650/FnCaps/releases/latest)から最新の`FnCaps-x.y.z.dmg`をダウンロードします。
+2. 開きます。
+3. `FnCaps.app`を`Applications`フォルダにドラッグします。
 
 ## 初回起動
 
@@ -78,7 +78,6 @@ FnCapsは入力した内容を記録しません。インターネットに接�
 
 - パスワード欄: macOSはパスワード欄を英語のまま扱うため、FnCapsはそこで言語を切り替えません。また、Caps Lockを長押ししてもCaps Lockはオンになりません。
 - Control+Space: FnCapsがオンの間は入力ソースを切り替えません。FnCapsをオフにするか終了すると、再び動作します。
-- Caps Lockランプ: キーを長押ししてCaps Lockをオンにすると、キーのランプは点灯しません。大文字は通常どおり入力されます。
 - 言語インジケータ: キーをすばやく押すと、カーソルの横にmacOSが表示する小さなインジケータが、実際に使用中の言語と異なる言語を示すことがあります。メニューバーには正しい言語が表示されます。
 - 英語の配列: FnCapsはABCとU.S.を英語として扱います。ABC – AZERTYとABC – QWERTZはフランス語とドイツ語として扱います。
 - Karabiner-Elementsとgksdud: これらのアプリは同じキーを変更します。`caps_lock`を使うKarabinerのルールがあると、FnCapsがキーを認識する前にそのルールがキーを取得します。どちらかが動作している間は、FnCapsが警告を表示します。

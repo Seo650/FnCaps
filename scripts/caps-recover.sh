@@ -3,11 +3,12 @@
 #   --snapshot  읽기 전용. 현재 #60을 ~/Library/Application Support/FnCaps/caps-baseline-60.plist 에 저장한다.
 #               이미 파일이 있고 현재 #60이 FnCaps 값이면 덮어쓰지 않는다.
 #               파일이 없는데 현재 #60이 FnCaps 값이면 거부한다(F18을 기준값으로 저장하지 않는다).
-#               새 위치에 파일이 없고 옛 위치(~/fncaps-spike)에 있으면 옛 파일을 복사해 쓴다(옛 파일은 지우지 않는다).
+#               새 위치에 파일이 없고 옛 위치(~/fncaps/spike)에 있으면 옛 파일을 복사해 쓴다(옛 파일은 지우지 않는다).
 #   --restore   앱을 끄고, Caps 매핑을 비우고, #60을 되돌린 뒤 반영한다.
 #               매핑: Caps 외 항목이 있으면 지우지 않고 알린 뒤 실패로 끝낸다(#60도 건드리지 않는다).
 #               #60: 앱을 끈 뒤 앱 값(65535...)일 때만 덮어쓴다. 원래 값은 기준값 파일, 없으면 앱 설정의 originalShortcut.
-#   --selftest  임시 파일과 문자열로 분기 규칙만 시험한다(defaults, hidutil에 닿지 않음).
+#               끝으로 --release-caps-led를 아는 FnCaps 바이너리로 표시등을 시스템 기본(Auto)에 돌린다(없으면 FnCaps를 다시 실행하면 정리).
+#   --selftest  임시 파일과 문자열로 분기 규칙만 시험한다(defaults, hidutil, 앱 실행에 닿지 않음).
 # 단계가 실패해도 끝까지 가서 실패 목록과 현재 값을 보여 준다.
 set -u
 
@@ -15,8 +16,9 @@ PB=/usr/libexec/PlistBuddy
 ACTIVATE=/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings
 ROOT="$HOME/Library/Application Support/FnCaps"
 BASELINE="$ROOT/caps-baseline-60.plist"
-LEGACY_BASELINE="$HOME/fncaps-spike/caps-baseline-60.plist"
+LEGACY_BASELINE="$HOME/fncaps/spike/caps-baseline-60.plist"
 APP_DOMAIN="io.github.seo650.fncaps"
+LED_FLAG="--release-caps-led"  # Sources/FnCapsSystem/CapsLed.swift의 releaseArgument와 같아야 한다.
 CAPS_DEC=30064771129  # 0x700000039
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -67,6 +69,21 @@ capture_app_original() {
   printf '%s' "$b64" | base64 -D >"$WORK/app-orig.bin" 2>/dev/null || return 1
   plutil -convert xml1 -o "$out" "$WORK/app-orig.bin" 2>/dev/null || return 1
   return 0
+}
+
+# pick_led_binary CANDIDATE... : --release-caps-led를 아는 실행 파일 중 첫 후보를 echo하고 0, 없으면 1.
+# 이 인자를 모르는 옛 바이너리(0.9.2 이하)는 인자를 무시하고 앱 본체를 띄우므로 실행하지 않는다(T-07-25).
+pick_led_binary() {
+  local candidate
+  for candidate in "$@"; do
+    [ -n "$candidate" ] || continue
+    [ -f "$candidate" ] && [ -x "$candidate" ] || continue
+    if grep -aq -- "$LED_FLAG" "$candidate"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+  return 1
 }
 
 # decide_60 현재첫인자 기준값파일있음(1/0) 앱백업상태(0/3/1) : leave | baseline | app | none
@@ -136,6 +153,12 @@ restore() {
   # 0. 앱 설정의 원래 #60을 먼저 챙긴다(정상 종료가 앱 설정을 지운다).
   capture_app_original "$WORK/app-orig.plist"
   app_state=$?
+  # 1단계 전에 실행 중인 앱 경로를 잡아 둔다(1단계가 앱을 끄므로 그 뒤에는 pgrep이 비어 있다).
+  local running_bin="" running_pid
+  running_pid="$(pgrep -x FnCaps | head -n 1)"
+  if [ -n "$running_pid" ]; then
+    running_bin="$(ps -o comm= -p "$running_pid" 2>/dev/null)"
+  fi
   # 1. 앱 종료(앱이 스스로 복원할 시간을 준다). 떠 있지 않으면 osascript가 앱을 띄우지 않게 건너뛴다.
   if pgrep -x FnCaps >/dev/null 2>&1; then
     osascript -e 'with timeout of 2 seconds' -e 'tell application "FnCaps" to quit' -e 'end timeout' >/dev/null 2>&1 || true
@@ -205,6 +228,22 @@ restore() {
     "$ACTIVATE" -u -virtualSession >/dev/null 2>&1 || failed+=("activateSettings")
   else
     failed+=("activateSettings 없음")
+  fi
+  # 5. 표시등 해제. 표시등 속성은 passive 클라이언트만 쓸 수 있어 hidutil로는 되돌릴 수 없다(RESEARCH F3).
+  # 그래서 --release-caps-led를 아는 FnCaps 바이너리를 부른다. 매핑 단계 결과와 관계없이 돈다(Auto는 시스템 기본값).
+  local led_bin led_out led_dir
+  led_dir="$(cd "$(dirname "$0")" 2>/dev/null && pwd -P)"
+  if led_bin="$(pick_led_binary "$running_bin" \
+      "/Applications/FnCaps.app/Contents/MacOS/FnCaps" \
+      "$HOME/Applications/FnCaps.app/Contents/MacOS/FnCaps" \
+      "$led_dir/../build/FnCaps.app/Contents/MacOS/FnCaps")"; then
+    if led_out="$("$led_bin" "$LED_FLAG" 2>&1)"; then
+      printf '%s\n' "$led_out"
+    else
+      echo "표시등: FnCaps를 다시 실행하면 정리됩니다." >&2
+    fi
+  else
+    echo "표시등: FnCaps를 다시 실행하면 정리됩니다." >&2
   fi
   if [ "${#failed[@]}" -eq 0 ]; then
     echo "복구 완료"
@@ -282,6 +321,18 @@ selftest() {
   plutil -create xml1 "$d/empty.plist"
   capture_app_original "$d/none.plist" "$d/empty.plist"
   [ "$?" = 1 ] || { echo "FAIL 백업 없음 상태" >&2; ok=0; }
+  # T-07-25: 표시등 바이너리 고르기. 임시 shell 파일 셋으로만 시험하고 실제 앱은 실행하지 않는다.
+  local no_string with_string not_exec miss miss_rc
+  no_string="$d/led-no-string"; with_string="$d/led-with-string"; not_exec="$d/led-not-exec"
+  printf '#!/bin/sh\n' >"$no_string"
+  printf '#!/bin/sh\n# %s\n' "$LED_FLAG" >"$with_string"
+  printf '#!/bin/sh\n# %s\n' "$LED_FLAG" >"$not_exec"
+  chmod +x "$no_string" "$with_string"
+  chmod -x "$not_exec" 2>/dev/null || true
+  [ "$(pick_led_binary "" "$no_string" "$not_exec" "$with_string")" = "$with_string" ] \
+    || { echo "FAIL 표시등 바이너리 고르기" >&2; ok=0; }
+  miss="$(pick_led_binary "$no_string" "$not_exec")"; miss_rc=$?
+  { [ -z "$miss" ] && [ "$miss_rc" = 1 ]; } || { echo "FAIL 표시등 바이너리 없음" >&2; ok=0; }
   [ "$ok" = 1 ] || return 1
   echo "SELFTEST OK"
 }
@@ -290,5 +341,5 @@ case "${1:-}" in
   --snapshot) snapshot ;;
   --restore) restore ;;
   --selftest) selftest ;;
-  *) sed -n '2,10p' "$0"; exit 2 ;;
+  *) sed -n '2,11p' "$0"; exit 2 ;;
 esac

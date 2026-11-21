@@ -33,9 +33,9 @@ brew install --cask Seo650/tap/fncaps
 
 ### GitHub Releases
 
-1. [Releases](https://github.com/Seo650/FnCaps/releases/latest)에서 최신 `FnCaps-x.y.z.zip`을 받습니다.
-2. 압축을 풉니다.
-3. `FnCaps.app`을 `/Applications`로 옮깁니다.
+1. [Releases](https://github.com/Seo650/FnCaps/releases/latest)에서 최신 `FnCaps-x.y.z.dmg`를 받습니다.
+2. 엽니다.
+3. `FnCaps.app`을 `Applications` 폴더로 끌어 넣습니다.
 
 ## 첫 실행
 
@@ -78,7 +78,6 @@ FnCaps는 입력한 글자를 기록하지 않습니다. 인터넷에 접속하�
 
 - 암호 입력란: macOS가 암호 입력란을 영어로 고정하므로 FnCaps가 언어를 전환하지 않고, Caps Lock을 길게 눌러도 Caps Lock이 켜지지 않습니다.
 - Control+Space: FnCaps가 켜져 있는 동안 입력 소스를 전환하지 않습니다. FnCaps를 끄거나 종료하면 다시 동작합니다.
-- Caps Lock 표시등: 키를 길게 눌러 Caps Lock을 켜도 키의 표시등은 꺼져 있습니다. 대문자는 정상으로 입력됩니다.
 - 언어 표시: 키를 빠르게 누르면 macOS가 커서 옆에 보여 주는 작은 표시가 실제 언어와 다를 수 있습니다. 메뉴 막대 표시는 맞습니다.
 - 영어 자판: FnCaps는 ABC와 U.S.를 영어로 봅니다. ABC – AZERTY와 ABC – QWERTZ는 프랑스어와 독일어로 봅니다.
 - Karabiner-Elements와 gksdud: 같은 키를 바꾸는 앱입니다. `caps_lock`을 쓰는 Karabiner 규칙은 FnCaps보다 먼저 키를 가져갑니다. 둘 중 하나가 실행 중이면 FnCaps가 경고를 보여 줍니다.

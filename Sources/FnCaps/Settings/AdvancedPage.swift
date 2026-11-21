@@ -13,8 +13,8 @@ struct AdvancedPage: View {
 
     // MARK: 길게 누르기
 
-    /// 길게 누르기가 꺼졌거나 Caps 목록에 영어 입력 소스가 없으면 시간·입력 소스 행을 쓸 수 없다(M3, D-26).
-    private var longRowsDisabled: Bool { !snapshot.capsLongEnabled || !snapshot.capsHasEnglish }
+    /// 길게 누르기가 꺼졌으면 시간·입력 소스 행을 쓸 수 없다(M3).
+    private var longRowsDisabled: Bool { !snapshot.capsLongEnabled }
 
     private var capsBox: some View {
         KeyZoneBox {
@@ -26,16 +26,6 @@ struct AdvancedPage: View {
                         get: { snapshot.capsLongEnabled },
                         set: { model.setCapsLongEnabled($0) }))
                         .greenSwitch()
-                }
-                if snapshot.capsLongEnabled, !snapshot.capsHasEnglish {
-                    Text(verbatim: L("longpress.noEnglish.note"))
-                        .font(DS.caption)
-                        .foregroundStyle(DS.warn)
-                        .lineSpacing(DS.s(2))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, DS.rowInset)
-                        .padding(.top, DS.s(-4))
-                        .padding(.bottom, DS.s(10))
                 }
                 SettingsDivider()
                 SettingRow(

@@ -112,7 +112,6 @@
 "globe.notice" = "「按下🌐︎键时」的设置与推荐值不同";
 "globe.notice.more" = "详细信息";
 
-"longpress.noEnglish.note" = "Caps Lock列表中没有英语输入法，因此目前按住不会锁定。";
 
 "memo.placeholder" = "测试输入";
 "menu.edit" = "编辑";
@@ -270,7 +269,6 @@
 "help.notes.globe" = "「按下🌐︎键时」建议使用「更改输入法」。设为该值时，Finder 重命名等输入栏也会立即切换。可在系统设置 > 键盘中更改。";
 "help.notes.globe.open" = "打开键盘设置";
 "help.notes.indicator" = "快速连按 fn 多次时，光标旁的提示可能与实际语言不同。直接输入会以正确的语言输入。";
-"help.notes.capsLight" = "长按 Caps Lock 开启大写锁定后，指示灯还不会亮起。大写字母仍会正常输入。指示灯将在后续更新中修复。";
 "help.notes.secureInput" = "在密码栏中，语言不会切换，长按 Caps Lock 也不会开启大写锁定。";
 "sidebar.report" = "报告问题";
 "report.title" = "报告问题";

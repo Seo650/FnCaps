@@ -112,7 +112,6 @@
 "globe.notice" = "Die Einstellung der 🌐︎-Taste weicht vom empfohlenen Wert ab";
 "globe.notice.more" = "Mehr erfahren";
 
-"longpress.noEnglish.note" = "In der Caps-Lock-Liste gibt es keine englische Eingabequelle, deshalb schaltet Halten die Feststelltaste derzeit nicht ein.";
 
 /* 04 재설계 */
 "memo.placeholder" = "Testtext";
@@ -271,7 +270,6 @@
 "help.notes.globe" = "Für „Beim Drücken der 🌐︎-Taste“ wird „Eingabequelle ändern“ empfohlen. Mit diesem Wert wechselt die Eingabequelle auch in Feldern wie beim Umbenennen im Finder sofort. Die Einstellung befindet sich in Systemeinstellungen > Tastatur.";
 "help.notes.globe.open" = "Tastatureinstellungen öffnen";
 "help.notes.indicator" = "Wird fn mehrmals schnell gedrückt, kann die Anzeige neben dem Cursor eine andere Sprache zeigen. Beim normalen Tippen wird trotzdem die richtige Sprache verwendet.";
-"help.notes.capsLight" = "Ein langer Tastendruck auf Caps Lock schaltet die Feststelltaste ein, aber die Kontrollleuchte leuchtet noch nicht. Großbuchstaben werden normal eingegeben. Die Kontrollleuchte wird in einem späteren Update korrigiert.";
 "help.notes.secureInput" = "In einem Passwortfeld wechselt die Sprache nicht, und ein langer Tastendruck auf Caps Lock schaltet die Feststelltaste nicht ein.";
 "sidebar.report" = "Problem melden";
 "report.title" = "Problem melden";

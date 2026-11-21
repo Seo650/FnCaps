@@ -14,7 +14,6 @@ public struct KeyLayout: Equatable, Sendable {
     public static let empty = KeyLayout(caps: [], fn: [], sources: [], rule: .nextAfterLast)
 
     public let entry: EntryChoices
-    public let capsHasEnglish: Bool
     /// engineLists만 담는다(사용 안 함은 엔진 목록이 아니다).
     private let lists: [SourceList: [SourceID]]
 
@@ -41,9 +40,6 @@ public struct KeyLayout: Equatable, Sendable {
         }
         self.entry = pruned
         self.lists = built
-        self.capsHasEnglish = (built[.caps] ?? []).contains { id in
-            infoByID[id].map { SourceClassifier.role(of: $0) == .base } ?? false
-        }
     }
 
     /// 옛 시그니처. 두 키에 같은 `OutsideRule`을 넣는다(04.3 전 동작).

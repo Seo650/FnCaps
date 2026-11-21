@@ -33,9 +33,9 @@ brew install --cask Seo650/tap/fncaps
 
 ### GitHub Releases
 
-1. Laden Sie die neueste `FnCaps-x.y.z.zip` von [Releases](https://github.com/Seo650/FnCaps/releases/latest) herunter.
-2. Entpacken Sie sie.
-3. Verschieben Sie `FnCaps.app` nach `/Applications`.
+1. Laden Sie die neueste `FnCaps-x.y.z.dmg` von [Releases](https://github.com/Seo650/FnCaps/releases/latest) herunter.
+2. Öffnen Sie sie.
+3. Ziehen Sie `FnCaps.app` in den Ordner `Applications`.
 
 ## Erster Start
 
@@ -78,7 +78,6 @@ FnCaps zeichnet nicht auf, was Sie tippen. Es verbindet sich in zwei Fällen mit
 
 - Passwortfelder: macOS hält Passwortfelder auf Englisch, daher wechselt FnCaps dort die Sprache nicht, und Halten von Caps Lock schaltet die Feststelltaste nicht ein.
 - Control+Space: wechselt die Eingabequelle nicht, solange FnCaps eingeschaltet ist. Es funktioniert wieder, wenn FnCaps ausgeschaltet oder beendet wird.
-- Caps-Lock-Leuchte: Wenn Sie Caps Lock durch Halten der Taste einschalten, bleibt die Leuchte auf der Taste aus. Großbuchstaben werden normal eingegeben.
 - Sprachindikator: Wenn Sie die Tasten schnell drücken, kann der kleine Indikator, den macOS neben dem Cursor anzeigt, eine andere Sprache zeigen als die verwendete. Die Menüleiste zeigt die richtige.
 - Englisches Layout: FnCaps behandelt ABC und U.S. als Englisch. ABC – AZERTY und ABC – QWERTZ zählen als Französisch und Deutsch.
 - Karabiner-Elements und gksdud: Diese Apps ändern dieselben Tasten. Eine Karabiner-Regel, die `caps_lock` verwendet, nimmt die Taste an sich, bevor FnCaps sie sieht. FnCaps zeigt eine Warnung, solange eine der beiden läuft.

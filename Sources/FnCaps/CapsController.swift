@@ -23,6 +23,9 @@ final class CapsController {
     private static let retrySeconds: TimeInterval = 5
     private var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
+    /// Caps 표시등(D-01~D-09). 경로는 `CapsLedPolicy.productPath` 하나로 고정했다
+    /// (Phase 7 실기 판정 07-SPIKE.md: 경로 A, D-09).
+    private let capsLed: CapsLedManager
     // 길게 누르기(CAPS-03). 대문자 잠금은 IOHID로만 바꾼다. 합성 Caps 이벤트는 쓰지 않는다.
     private let capsLock = CapsLockController()
     /// 누름 시점의 잠금 값. 늦게 읽으면 입력기가 바꾼 값이 된다.
@@ -71,12 +74,18 @@ final class CapsController {
         shortcut = ShortcutManager(
             defaults: defaults, prefs: SymbolicHotkeyWriter.live, now: { ProcessInfo.processInfo.systemUptime })
         mappings = KeyMappingManager(defaults: defaults, bootSession: KeyboardMapper.bootSession())
+        capsLed = CapsLedManager(
+            writer: CapsLed(log: log),
+            path: { CapsLedPolicy.productPath },
+            log: log)
         globe?.capsLockState = { [capsLock] in capsLock.isOn() }
         globe?.onPulseWait = { [weak self] landed in self?.notePulseWait(landed: landed) }
         // 앞 앱이 바뀌면 우연한 잠금 변경을 막으려고 취소한다(T-03-16).
         activateObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] _ in self?.cancelLong() }
+        // 강제 종료로 남은 On을 다음 실행에서 Auto로 정리한다(D-07). 중복 실행 검사는 main.swift가 먼저 끝낸다.
+        capsLed.release(reason: "launch")
     }
 
     deinit {
@@ -194,6 +203,10 @@ final class CapsController {
                 self.failedAt = nil
                 if self.lastResult == .full { self.lastResult = nil }
                 self.onRecover?()
+                // 깨어남·잠금 해제 뒤 OS가 LED를 Auto로 되돌리므로 현재 잠금을 다시 읽어 맞춘다.
+                // 새 타이머를 만들지 않고 이 기존 예약 안에서만 쓴다(D-04).
+                let mappingUp = self.tap.capsKeyCode != nil
+                self.capsLed.apply(reason: "recover", mappingUp: mappingUp, lockOn: self.capsLock.isOn())
                 self.updateTimer()
             }
         }
@@ -277,6 +290,8 @@ final class CapsController {
         let ok = !report.enumerationFailed && !report.anyFailed
         if ok {
             tap.capsKeyCode = nil
+            // 잠금 화면·다른 세션·「FnCaps 끄기」 앱에서는 진짜 Caps가 돌아오므로 OS가 LED를 맞춘다.
+            capsLed.release(reason: "shortcutOnly")
             lastResult = .shortcutOnly
             failedAt = nil
         } else {
@@ -426,6 +441,9 @@ final class CapsController {
     }
 
     private func runRestore() {
+        capsLed.release(reason: "restore")
+        // 복원 시작이 표시등 책임을 내려놓는 시점이다. 성공 경로에만 두면 mappingFailed와
+        // 종료 2초 제한에서 On이 남는다(D-04, D-07).
         let force = restoreForce
         restoreForce = false
         let report = mappings.restore(devices: KeyboardMapper.keyboards())
@@ -569,8 +587,12 @@ final class CapsController {
             log("caps long fired from=\(from)")
             return
         }
-        // 전환할 곳이 없으면 전환만 생략하고 잠금을 바꾼다.
-        guard case .switchTo(let id) = service.preview(.caps) else {
+        // 영어가 어느 목록(Caps·fn·사용 안 함)에 있든 그 영어로 바꾼 뒤 잠근다.
+        // 영어가 없으면 전환만 생략하고 잠금을 바꾼다(quick 261121-cle).
+        guard let id = CapsLongRule.englishTarget(
+            caps: service.lists?.caps ?? [], fn: service.lists?.fn ?? [],
+            excluded: service.lists?.excluded ?? [], sources: service.sources
+        ) else {
             flipLock()
             log("caps long fired from=\(from) switch=none")
             return
@@ -602,7 +624,10 @@ final class CapsController {
     private func flipLock() {
         let next = !longStartCaps
         // 설정 직후 다시 읽어 확인하지 않는다(늦게 바뀐다).
-        if capsLock.set(next) { tap.noteCapsLock(on: next) }
+        if capsLock.set(next) {
+            tap.noteCapsLock(on: next)
+            capsLed.apply(reason: "lock", mappingUp: tap.capsKeyCode != nil, lockOn: next)
+        }
     }
 
     private func releaseHold(_ reason: String) {

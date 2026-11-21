@@ -112,7 +112,6 @@
 "globe.notice" = "El ajuste de la tecla 🌐 difiere del valor recomendado";
 "globe.notice.more" = "Más información";
 
-"longpress.noEnglish.note" = "La lista de Caps Lock no tiene ninguna fuente de entrada en inglés, así que, por ahora, mantener pulsada la tecla no activa Bloqueo Mayúsculas.";
 
 /* 04 재설계 */
 "memo.placeholder" = "Texto de prueba";
@@ -271,7 +270,6 @@
 "help.notes.globe" = "Para «Acción al pulsar la tecla 🌐︎», se recomienda «Cambiar fuente de entrada». Con ese valor, la fuente de entrada también cambia al instante en campos como el de cambio de nombre del Finder. Se ajusta en Ajustes del Sistema > Teclado.";
 "help.notes.globe.open" = "Abrir ajustes de Teclado";
 "help.notes.indicator" = "Pulsar fn rápidamente varias veces puede dejar la indicación junto al cursor en otro idioma. Al escribir con normalidad, se usa el idioma correcto.";
-"help.notes.capsLight" = "Una pulsación prolongada de Caps Lock activa Bloqueo Mayúsculas, pero el indicador todavía no se enciende. Las mayúsculas se escriben con normalidad. El indicador se corregirá en una actualización posterior.";
 "help.notes.secureInput" = "En un campo de contraseña, el idioma no cambia y una pulsación prolongada de Caps Lock no activa Bloqueo Mayúsculas.";
 "sidebar.report" = "Reportar error";
 "report.title" = "Informar de un problema";

@@ -232,4 +232,68 @@ import Testing
     @Test func baseReturnLimitIsSeparateConstant() {
         #expect(CapsLongRule.baseReturnLimit == 0.5)
     }
+
+    // MARK: 바꿀 영어 고르기(quick 261121-cle)
+
+    private static let abc = makeSource("abc", ["en"])
+    private static let us = makeSource("us", ["en-US"])
+    private static let ko = makeSource("ko", ["ko"])
+    private static let ja = makeSource("ja", ["ja"])
+
+    /// Caps 목록에 영어가 있으면 그 영어.
+    @Test func englishInCapsList() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["abc", "ko"], fn: ["ja"], excluded: [],
+            sources: [Self.abc, Self.us, Self.ko, Self.ja])
+        #expect(target == "abc")
+    }
+
+    /// 영어가 fn 목록에만 있어도 그 영어로 간다(2026-11-21 사용자 결정).
+    @Test func englishOnlyInFnList() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["ko"], fn: ["abc"], excluded: [], sources: [Self.abc, Self.ko])
+        #expect(target == "abc")
+    }
+
+    /// 영어가 「사용 안 함」에만 있어도 그 영어로 간다.
+    @Test func englishOnlyInExcluded() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["ko"], fn: ["ja"], excluded: ["abc"], sources: [Self.abc, Self.ko, Self.ja])
+        #expect(target == "abc")
+    }
+
+    /// 영어가 둘이면 Caps → fn → 사용 안 함 순서로 앞 목록의 영어.
+    @Test func listOrderWins() {
+        let target = CapsLongRule.englishTarget(
+            caps: [], fn: ["abc"], excluded: ["us"], sources: [Self.abc, Self.us])
+        #expect(target == "abc")
+    }
+
+    /// Caps 목록의 영어가 fn 목록의 영어보다 앞선다.
+    @Test func capsBeforeFn() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["us"], fn: ["abc"], excluded: [], sources: [Self.abc, Self.us])
+        #expect(target == "us")
+    }
+
+    /// 같은 목록에 영어가 둘이면 놓인 순서의 앞 영어.
+    @Test func placementOrderWithinList() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["us", "abc"], fn: [], excluded: [], sources: [Self.abc, Self.us])
+        #expect(target == "us")
+    }
+
+    /// 꺼진 소스는 후보에서 뺀다.
+    @Test func disabledSourceIgnored() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["abc"], fn: [], excluded: [], sources: [Self.ko])
+        #expect(target == nil)
+    }
+
+    /// 영어가 하나도 없으면 nil(전환 없이 잠금만 바꾼다).
+    @Test func noEnglishReturnsNil() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["ko"], fn: ["ja"], excluded: [], sources: [Self.ko, Self.ja])
+        #expect(target == nil)
+    }
 }

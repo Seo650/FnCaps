@@ -112,7 +112,6 @@
 "globe.notice" = "Le réglage de la touche 🌐 diffère de la valeur recommandée";
 "globe.notice.more" = "En savoir plus";
 
-"longpress.noEnglish.note" = "La liste Caps Lock n’a aucune méthode de saisie anglaise ; le maintien ne verrouille donc pas pour l’instant.";
 
 /* 04 재설계 */
 "memo.placeholder" = "Texte de test";
@@ -271,7 +270,6 @@
 "help.notes.globe" = "Pour « Appuyer sur la touche 🌐︎ pour », « Changer de source d’entrée » est recommandé. Avec cette valeur, la méthode de saisie change aussi immédiatement dans des champs comme celui du renommage dans le Finder. Le réglage se trouve dans Réglages Système > Clavier.";
 "help.notes.globe.open" = "Ouvrir les réglages Clavier";
 "help.notes.indicator" = "Appuyer rapidement plusieurs fois sur fn peut laisser l’indication à côté du curseur sur une autre langue. La saisie se fait quand même dans la bonne langue.";
-"help.notes.capsLight" = "Un appui long sur Caps Lock active le verrouillage des majuscules, mais le voyant ne s’allume pas encore. Les majuscules s’écrivent normalement. Le voyant sera corrigé dans une prochaine mise à jour.";
 "help.notes.secureInput" = "Dans un champ de mot de passe, la langue ne change pas et un appui long sur Caps Lock n’active pas le verrouillage des majuscules.";
 "sidebar.report" = "Signaler un bug";
 "report.title" = "Signaler un problème";

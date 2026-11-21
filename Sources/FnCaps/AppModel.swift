@@ -42,7 +42,6 @@ struct AppSnapshot: Equatable {
     var capsLongEnabled: Bool = true
     var settleGlobalMs: Int = SettleTimePolicy.defaultMs
     var settleExceptions: [SettleException] = []
-    var capsHasEnglish: Bool = false
     /// 지금 입력 소스 ID. 입력 소스가 바뀌면 스냅숏만 다시 만든다.
     var currentSourceID: SourceID? = nil
     /// 실행 중인 충돌 앱 이름(ConflictApps 순서). D-40.
@@ -674,7 +673,6 @@ final class AppModel: ObservableObject {
             pendingNewSourceIDs: pendingIDs, newSourcesMenuTitle: newSourcesTitle(pendingIDs),
             entry: service.layout.entry, capsLongEnabled: capsLongEnabledSetting,
             settleGlobalMs: settleGlobalMs, settleExceptions: settleExceptionList,
-            capsHasEnglish: service.layout.capsHasEnglish,
             currentSourceID: service.currentID,
             conflictApps: conflictApps, conflictDismissed: bool(Key.conflictDismissed, false),
             appLanguage: appLanguage,
@@ -865,7 +863,8 @@ final class AppModel: ObservableObject {
             tapGoneAt = now
         }
         let fnOn = service.layout.fnListActive
-        let longOn = capsLongEnabledSetting && service.layout.capsHasEnglish
+        // 영어가 어느 목록에 있든 길게 누르기가 동작한다(quick 261121-cle). 끈 설정만 본다.
+        let longOn = capsLongEnabledSetting
         // 끈 앱에서는 fn을 기존 bypass 경로로 OS에 넘긴다. 사용자 설정값 enabled와 상태 표시는 그대로.
         tap.fnEnabled = service.layout.fnListActive && !appOff
         tap.capsLongEnabled = longOn
@@ -875,7 +874,7 @@ final class AppModel: ObservableObject {
         }
         if lastCapsLongEnabled != longOn {
             lastCapsLongEnabled = longOn
-            AppLog.info("caps long enabled=\(longOn) english=\(service.layout.capsHasEnglish)")
+            AppLog.info("caps long enabled=\(longOn)")
         }
         caps.reconcile(target: CapsMappingPolicy.target(
             axTrusted: PermissionMonitor.axTrusted(), enabled: isEnabled, tapInstalled: tap.isInstalled,

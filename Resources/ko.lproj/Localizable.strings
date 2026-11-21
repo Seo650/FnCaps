@@ -112,7 +112,6 @@
 "globe.notice" = "「🌐 키를 누르면」 설정이 권장과 다릅니다";
 "globe.notice.more" = "자세히";
 
-"longpress.noEnglish.note" = "Caps 목록에 영어 입력 소스가 없어 지금은 잠기지 않습니다.";
 
 /* 04 재설계 */
 "memo.placeholder" = "입력 테스트";
@@ -270,7 +269,6 @@
 "help.notes.globe" = "「🌐 키를 누르면」은 「입력 소스 변경」을 권장합니다. 이 값이면 Finder 이름 바꾸기 같은 입력란에서도 바로 바뀝니다. 시스템 설정 > 키보드에서 바꿉니다.";
 "help.notes.globe.open" = "키보드 설정 열기";
 "help.notes.indicator" = "fn을 빠르게 여러 번 누르면 커서 옆 표시가 실제 언어와 다를 수 있습니다. 그냥 입력하면 맞는 언어로 들어갑니다.";
-"help.notes.capsLight" = "Caps Lock을 길게 눌러 대문자 잠금을 켜도 표시등은 아직 켜지지 않습니다. 대문자는 정상으로 입력됩니다. 표시등은 이후 업데이트에서 고칠 예정입니다.";
 "help.notes.secureInput" = "암호 입력란에서는 언어가 바뀌지 않고, Caps Lock을 길게 눌러도 대문자 잠금이 켜지지 않습니다.";
 "sidebar.report" = "문제 알리기";
 "report.title" = "문제 알리기";
