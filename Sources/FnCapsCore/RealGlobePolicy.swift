@@ -107,11 +107,18 @@ public enum FnRoutePolicy {
     /// AppleFnUsageType: 0 없음, 1 입력 소스 변경, 2 이모지, 3 받아쓰기.
     public static let changeInputSourceUsage = 1
 
-    /// 1이 아니면 fn 해제를 넘길 때 OS가 다른 동작(이모지 창 등)을 하거나 아무것도 안 하므로
+    /// 새 계정에는 AppleFnUsageType 키가 없고 시스템 설정은 「입력 소스 변경」으로 보인다(2026-11-20 관찰).
+    /// 키가 없으면 1로 본다(D-10). 단계 끝 새 계정 실기로 확인하고, nil인데 fn 전환이 안 되면 되돌린다.
+    public static func effectiveUsage(_ usage: Int?) -> Int {
+        usage ?? changeInputSourceUsage
+    }
+
+    /// 1(또는 키 없음)이 아니면 fn 해제를 넘길 때 OS가 다른 동작(이모지 창 등)을 하거나 아무것도 안 하므로
     /// 넘기지 않는다. alreadySwitching이면 준비를 콜백 안에서 동기로 할 수 없으므로(전환이 줄
     /// 서 있음) 앱이 처리한다.
     public static func decide(isSwitch: Bool, usage: Int?, rapid: Bool, alreadySwitching: Bool) -> FnRoute {
-        isSwitch && usage == changeInputSourceUsage && !rapid && !alreadySwitching ? .passToOS : .inApp
+        isSwitch && effectiveUsage(usage) == changeInputSourceUsage && !rapid && !alreadySwitching
+            ? .passToOS : .inApp
     }
 }
 

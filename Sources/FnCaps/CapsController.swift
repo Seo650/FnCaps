@@ -23,8 +23,8 @@ final class CapsController {
     private static let retrySeconds: TimeInterval = 5
     private var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
-    /// Caps 표시등(D-01~D-09). 경로는 `CapsLedPolicy.productPath` 하나로 고정했다
-    /// (Phase 7 실기 판정 07-SPIKE.md: 경로 A, D-09).
+    /// Caps 표시등(D-01~D-09). Phase 7 판정으로 경로 A(Auto 다시 쓰기) 하나만 남았다
+    /// (07-SPIKE.md, 07-REVIEW WR-03).
     private let capsLed: CapsLedManager
     // 길게 누르기(CAPS-03). 대문자 잠금은 IOHID로만 바꾼다. 합성 Caps 이벤트는 쓰지 않는다.
     private let capsLock = CapsLockController()
@@ -74,10 +74,7 @@ final class CapsController {
         shortcut = ShortcutManager(
             defaults: defaults, prefs: SymbolicHotkeyWriter.live, now: { ProcessInfo.processInfo.systemUptime })
         mappings = KeyMappingManager(defaults: defaults, bootSession: KeyboardMapper.bootSession())
-        capsLed = CapsLedManager(
-            writer: CapsLed(log: log),
-            path: { CapsLedPolicy.productPath },
-            log: log)
+        capsLed = CapsLedManager(writer: CapsLed(log: log), log: log)
         globe?.capsLockState = { [capsLock] in capsLock.isOn() }
         globe?.onPulseWait = { [weak self] landed in self?.notePulseWait(landed: landed) }
         // 앞 앱이 바뀌면 우연한 잠금 변경을 막으려고 취소한다(T-03-16).
@@ -441,9 +438,9 @@ final class CapsController {
     }
 
     private func runRestore() {
-        capsLed.release(reason: "restore")
         // 복원 시작이 표시등 책임을 내려놓는 시점이다. 성공 경로에만 두면 mappingFailed와
         // 종료 2초 제한에서 On이 남는다(D-04, D-07).
+        capsLed.release(reason: "restore")
         let force = restoreForce
         restoreForce = false
         let report = mappings.restore(devices: KeyboardMapper.keyboards())
@@ -587,11 +584,12 @@ final class CapsController {
             log("caps long fired from=\(from)")
             return
         }
-        // 영어가 어느 목록(Caps·fn·사용 안 함)에 있든 그 영어로 바꾼 뒤 잠근다.
-        // 영어가 없으면 전환만 생략하고 잠금을 바꾼다(quick 261121-cle).
+        // 영어가 어느 목록(Caps·fn·지정 단축키·사용 안 함)에 있든 그 영어로 바꾼 뒤 잠근다.
+        // 영어가 없으면 전환만 생략하고 잠금을 바꾼다(quick 261121-cle, 07-REVIEW WR-01).
         guard let id = CapsLongRule.englishTarget(
             caps: service.lists?.caps ?? [], fn: service.lists?.fn ?? [],
-            excluded: service.lists?.excluded ?? [], sources: service.sources
+            assigned: service.lists?.assigned ?? [], excluded: service.lists?.excluded ?? [],
+            sources: service.sources
         ) else {
             flipLock()
             log("caps long fired from=\(from) switch=none")

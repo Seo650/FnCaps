@@ -12,8 +12,10 @@
 "setup.back" = "上一步";
 "setup.next" = "下一步";
 "setup.finish" = "完成";
-"setup.finish.confirm.title" = "完成初始設定嗎？";
+"setup.finish.confirm.title" = "不選擇配置就完成嗎？";
 "setup.finish.confirm.body" = "可以在 %@ 中再次查看推薦配置。";
+"setup.finish.confirm.back" = "返回選擇";
+"setup.finish.confirm.finish" = "不選擇並完成";
 "setup.welcome.title" = "歡迎使用 FnCaps";
 "setup.welcome.body" = "用 fn 和 Caps Lock 切換輸入方式。只需幾步即可完成設定。";
 "setup.globe.title" = "🌐 鍵 → 更改輸入方式";
@@ -92,6 +94,7 @@
 "status.off" = "關閉";
 "menu.turnOn" = "開啟FnCaps";
 "menu.turnOff" = "關閉FnCaps";
+"menu.resumeSetup" = "繼續初始設定…";
 "menu.openSettings" = "開啟設定…";
 "menu.report" = "回報問題…";
 "menu.quit" = "結束FnCaps";

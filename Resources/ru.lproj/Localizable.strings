@@ -12,8 +12,10 @@
 "setup.back" = "Назад";
 "setup.next" = "Далее";
 "setup.finish" = "Готово";
-"setup.finish.confirm.title" = "Завершить настройку?";
+"setup.finish.confirm.title" = "Завершить без выбора раскладки?";
 "setup.finish.confirm.body" = "Рекомендуемые раскладки можно снова посмотреть в разделе %@.";
+"setup.finish.confirm.back" = "Вернуться и выбрать";
+"setup.finish.confirm.finish" = "Завершить без раскладки";
 "setup.welcome.title" = "Добро пожаловать в FnCaps";
 "setup.welcome.body" = "Переключайте источники ввода клавишами fn и Caps Lock. Настройка займёт несколько шагов.";
 "setup.globe.title" = "Клавиша 🌐 → Переключает источник ввода";
@@ -92,6 +94,7 @@
 "status.off" = "Выключено";
 "menu.turnOn" = "Включить FnCaps";
 "menu.turnOff" = "Выключить FnCaps";
+"menu.resumeSetup" = "Продолжить первую настройку…";
 "menu.openSettings" = "Открыть настройки…";
 "menu.report" = "Сообщить о проблеме…";
 "menu.quit" = "Завершить FnCaps";

@@ -12,8 +12,10 @@
 "setup.back" = "Précédent";
 "setup.next" = "Suivant";
 "setup.finish" = "Terminer";
-"setup.finish.confirm.title" = "Terminer la configuration ?";
+"setup.finish.confirm.title" = "Terminer sans choisir de disposition ?";
 "setup.finish.confirm.body" = "Vous retrouverez les dispositions recommandées dans %@.";
+"setup.finish.confirm.back" = "Revenir et choisir";
+"setup.finish.confirm.finish" = "Terminer sans disposition";
 "setup.welcome.title" = "Bienvenue dans FnCaps";
 "setup.welcome.body" = "Changez de méthode de saisie avec fn et Caps Lock. La configuration ne prend que quelques étapes.";
 "setup.globe.title" = "Touche 🌐 → Changer de source d’entrée";
@@ -92,6 +94,7 @@
 "status.off" = "Désactivé";
 "menu.turnOn" = "Activer FnCaps";
 "menu.turnOff" = "Désactiver FnCaps";
+"menu.resumeSetup" = "Reprendre la configuration initiale…";
 "menu.openSettings" = "Ouvrir les réglages…";
 "menu.report" = "Signaler un problème…";
 "menu.quit" = "Quitter FnCaps";

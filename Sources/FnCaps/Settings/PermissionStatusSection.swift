@@ -112,8 +112,8 @@ struct PermissionStatusSection: View {
                     }
                 }
                 if look == .running {
-                    // 처음 설정 중에는 도움말 쪽으로 갈 수 없으니(창이 설정 화면에 고정) 링크를 숨긴다.
-                    if ui.setupMode { caption(L(style.descKey)) } else { runningCaption() }
+                    // 처음 설정이 별도 창으로 나가 이 창은 늘 평소 창이다. [권장 배치 보기] 링크를 그대로 둔다(08.1 D-01).
+                    runningCaption()
                 } else {
                     caption(L(style.descKey))
                 }

@@ -4,10 +4,12 @@ import SwiftUI
 
 /// 처음 설정 5단계(04.5-04, UI-SPEC §6-5): 「FnCaps 권장」 후보 목록과 그 맨 마지막 「직접 설정」 행,
 /// 그리고 그 행을 눌렀을 때 같은 단계 안에서 보이는 분기 쪽(안내 4행)이다.
-/// 단계는 5 그대로 두고 저장하지 않는다(S-15·S-17): 분기 여부는 `SettingsUIState.setupBranch`만 쓴다.
+/// 단계는 5 그대로 두고 저장하지 않는다(S-15·S-17): 분기 여부는 `OnboardingUIState.setupBranch`만 쓴다.
 struct SetupLayoutStep: View {
     @ObservedObject var model: AppModel
-    @ObservedObject var ui: SettingsUIState
+    @ObservedObject var ui: OnboardingUIState
+    /// 후보 [이 설정 사용하기]를 강조할지. OnboardingView가 OnboardingButtonRule의 candidatesProminent를 넘긴다(G-08.1-13).
+    let candidatesProminent: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// 분기가 열릴 때 제목으로 VoiceOver 포커스를 옮긴다(UI-SPEC §6-5 접근성).
     @AccessibilityFocusState private var titleFocused: Bool
@@ -29,7 +31,7 @@ struct SetupLayoutStep: View {
             case .ready(let ready):
                 // S-9: 묶음 제목은 스크롤 영역 안에 두고, 후보 목록 맨 아래에 「직접 설정」 행을 붙인다.
                 SettingsGroup(title: L("help.setup.segment.fncaps")) {
-                    CandidateList(ui: ui, ready: ready, tiles: HelpTiles(model.snapshot.helpSources))
+                    CandidateList(ui: ui, miniKeys: ui.miniKeys, ready: ready, tiles: HelpTiles(model.snapshot.helpSources), prominentUse: candidatesProminent)
                     SettingsDivider()
                     customRow
                 }

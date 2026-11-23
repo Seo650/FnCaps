@@ -29,19 +29,19 @@ import Testing
     // MARK: RecoveryFailureAction
 
     @Test func permissionRequiredIgnoresCanRestart() {
-        #expect(RecoveryFailureAction.decide(result: .permissionRequired, canRestart: true) == .showPermissionNeeded)
-        #expect(RecoveryFailureAction.decide(result: .permissionRequired, canRestart: false) == .showPermissionNeeded)
+        #expect(RecoveryFailureAction.decide(result: .permissionRequired, canRestart: true, tapStartedSinceGrant: false) == .showPermissionNeeded)
+        #expect(RecoveryFailureAction.decide(result: .permissionRequired, canRestart: false, tapStartedSinceGrant: false) == .showPermissionNeeded)
     }
 
     @Test func failedRestartsOnceThenShowsReset() {
-        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: true) == .autoRestart)
-        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: false) == .showReset)
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: true, tapStartedSinceGrant: false) == .autoRestart)
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: false, tapStartedSinceGrant: false) == .showReset)
     }
 
     @Test func startedAndCancelledAreIgnored() {
         for canRestart in [true, false] {
-            #expect(RecoveryFailureAction.decide(result: .started, canRestart: canRestart) == .ignore)
-            #expect(RecoveryFailureAction.decide(result: .cancelled, canRestart: canRestart) == .ignore)
+            #expect(RecoveryFailureAction.decide(result: .started, canRestart: canRestart, tapStartedSinceGrant: false) == .ignore)
+            #expect(RecoveryFailureAction.decide(result: .cancelled, canRestart: canRestart, tapStartedSinceGrant: false) == .ignore)
         }
     }
 
@@ -50,23 +50,79 @@ import Testing
     @Test func noRestartLoopAcrossInstances() {
         let d = MemoryDefaults()
         let first = RestartMemory(defaults: d)
-        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: first.canRestart) == .autoRestart)
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: first.canRestart, tapStartedSinceGrant: false) == .autoRestart)
         first.markRestarted()
         let afterRestart = RestartMemory(defaults: d)
-        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: afterRestart.canRestart) == .showReset)
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: afterRestart.canRestart, tapStartedSinceGrant: false) == .showReset)
     }
 
     @Test func oneSuccessAfterRestartDoesNotReopenTheLoop() {
         let d = MemoryDefaults()
         let first = RestartMemory(defaults: d)
-        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: first.canRestart) == .autoRestart)
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: first.canRestart, tapStartedSinceGrant: false) == .autoRestart)
         first.markRestarted()
 
         let afterRestart = RestartMemory(defaults: d)
         var stability = RestartStability()
         // 재시작 뒤 탭이 한 번 성공해도 60 s가 차지 않았으므로 기록을 지우지 않는다.
         if stability.noteSuccess(now: 0) { afterRestart.clear() }
-        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: afterRestart.canRestart) == .showReset)
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: afterRestart.canRestart, tapStartedSinceGrant: false) == .showReset)
+    }
+
+    // MARK: G-08.1-4 권한 잃음
+
+    @Test func failedAfterTapStartedStaysInPlace() {
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: true, tapStartedSinceGrant: true) == .showPermissionNeeded)
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: false, tapStartedSinceGrant: true) == .showPermissionNeeded)
+    }
+
+    @Test func tapHistoryDoesNotChangeOtherResults() {
+        for tapStarted in [true, false] {
+            #expect(RecoveryFailureAction.decide(result: .permissionRequired, canRestart: true, tapStartedSinceGrant: tapStarted) == .showPermissionNeeded)
+            #expect(RecoveryFailureAction.decide(result: .started, canRestart: true, tapStartedSinceGrant: tapStarted) == .ignore)
+            #expect(RecoveryFailureAction.decide(result: .cancelled, canRestart: true, tapStartedSinceGrant: tapStarted) == .ignore)
+        }
+    }
+
+    @Test func grantSessionTracksTapSinceGrant() {
+        var session = GrantSession()
+        #expect(session.tapStartedSinceGrant == false)
+        session.noteTapStarted()
+        #expect(session.tapStartedSinceGrant == true)
+        session.noteGrant()
+        #expect(session.tapStartedSinceGrant == false)
+    }
+
+    @Test func notificationClearsOnlyAfterLossShown() {
+        var session = GrantSession()
+        session.noteTapStarted()
+        // 잃음을 보이기 전의 알림(철회 알림 자체)은 지우지 않는다.
+        session.noteAccessibilityNotification()
+        #expect(session.tapStartedSinceGrant == true)
+        session.noteLossShown()
+        // 잃음을 보인 뒤 온 알림은 다시 허용일 수 있어 지운다(낡은 ax가 계속 true여도 L2가 살아난다).
+        session.noteAccessibilityNotification()
+        #expect(session.tapStartedSinceGrant == false)
+    }
+
+    @Test func lossShownWithoutTapIsNoOp() {
+        var session = GrantSession()
+        session.noteLossShown()
+        #expect(session.tapStartedSinceGrant == false)
+        session.noteAccessibilityNotification()
+        #expect(session.tapStartedSinceGrant == false)
+    }
+
+    @Test func revokeThenRegrantRestartsAgain() {
+        var session = GrantSession()
+        session.noteTapStarted()
+        // 철회 알림 → 탭 실패는 재시작하지 않고 제자리 권한 없음.
+        session.noteAccessibilityNotification()
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: true, tapStartedSinceGrant: session.tapStartedSinceGrant) == .showPermissionNeeded)
+        // 잃음을 보인 뒤 다시 허용 알림이 오면 탭 실패가 다시 L2 자동 재시작 대상이다.
+        session.noteLossShown()
+        session.noteAccessibilityNotification()
+        #expect(RecoveryFailureAction.decide(result: .failed, canRestart: true, tapStartedSinceGrant: session.tapStartedSinceGrant) == .autoRestart)
     }
 
     // MARK: RestartStability

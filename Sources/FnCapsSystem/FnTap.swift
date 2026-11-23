@@ -38,7 +38,7 @@ public final class FnTap {
     }
     /// 길게 누르기 기준 시간(초). 새 누름이 시작될 때 읽는다(바꾸면 다음 누름부터 적용).
     public var capsLongDelay: TimeInterval = Double(CapsPressJudge.defaultMs) / 1000
-    /// false: 길게 누르기 끄기(D-17) 또는 Caps 목록에 영어계 없음(D-26). 새 누름부터 적용.
+    /// false: 길게 누르기 끄기(D-17). 새 누름부터 적용.
     public var capsLongEnabled = true
     /// false: fn 목록이 비었다(D-10). fn과 🌐을 제스처에 보내지 않고 통과시킨다.
     public var fnEnabled = true {

@@ -3,11 +3,11 @@
 #   --snapshot  읽기 전용. 현재 #60을 ~/Library/Application Support/FnCaps/caps-baseline-60.plist 에 저장한다.
 #               이미 파일이 있고 현재 #60이 FnCaps 값이면 덮어쓰지 않는다.
 #               파일이 없는데 현재 #60이 FnCaps 값이면 거부한다(F18을 기준값으로 저장하지 않는다).
-#               새 위치에 파일이 없고 옛 위치(~/fncaps/spike)에 있으면 옛 파일을 복사해 쓴다(옛 파일은 지우지 않는다).
+#               새 위치에 파일이 없고 옛 위치(저장소 안 spike/, 개발용)에 있으면 옛 파일을 복사해 쓴다(옛 파일은 지우지 않는다).
 #   --restore   앱을 끄고, Caps 매핑을 비우고, #60을 되돌린 뒤 반영한다.
 #               매핑: Caps 외 항목이 있으면 지우지 않고 알린 뒤 실패로 끝낸다(#60도 건드리지 않는다).
 #               #60: 앱을 끈 뒤 앱 값(65535...)일 때만 덮어쓴다. 원래 값은 기준값 파일, 없으면 앱 설정의 originalShortcut.
-#               끝으로 --release-caps-led를 아는 FnCaps 바이너리로 표시등을 시스템 기본(Auto)에 돌린다(없으면 FnCaps를 다시 실행하면 정리).
+#               끝으로 --release-caps-led를 아는 FnCaps 바이너리로 표시등을 시스템 기본(Auto)에 돌린다(없으면 FnCaps를 다시 실행하면 정리). 표시등 해제는 약 3초 제한.
 #   --selftest  임시 파일과 문자열로 분기 규칙만 시험한다(defaults, hidutil, 앱 실행에 닿지 않음).
 # 단계가 실패해도 끝까지 가서 실패 목록과 현재 값을 보여 준다.
 set -u
@@ -16,9 +16,13 @@ PB=/usr/libexec/PlistBuddy
 ACTIVATE=/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings
 ROOT="$HOME/Library/Application Support/FnCaps"
 BASELINE="$ROOT/caps-baseline-60.plist"
-LEGACY_BASELINE="$HOME/fncaps/spike/caps-baseline-60.plist"
+# 옛 기준값 위치(개발 저장소 안 spike/). 공개 사본에는 spike/가 없어 영향이 없다.
+# 개인 홈 경로를 적지 않는다(07-REVIEW IN-07, REL-04).
+LEGACY_BASELINE="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd -P)/spike/caps-baseline-60.plist"
 APP_DOMAIN="io.github.seo650.fncaps"
 LED_FLAG="--release-caps-led"  # Sources/FnCapsSystem/CapsLed.swift의 releaseArgument와 같아야 한다.
+# 표시등 해제를 기다리는 0.1초 단위 횟수(약 3초). macOS에는 timeout이 없다(07-REVIEW WR-02).
+LED_WAIT_TENTHS=30
 CAPS_DEC=30064771129  # 0x700000039
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -84,6 +88,33 @@ pick_led_binary() {
     fi
   done
   return 1
+}
+
+# run_led_release BIN : 표시등 해제를 백그라운드로 돌리고 제한 시간(약 3초)이 지나면
+# 이 함수가 띄운 PID 하나만 끝낸다. macOS에는 timeout이 없다(07-REVIEW WR-02).
+# 반환: 0=성공(출력을 그대로 보인다), 124=시간 초과, 그 밖=바이너리의 종료 코드.
+run_led_release() {
+  local pid i rc alive=1
+  "$1" "$LED_FLAG" >"$WORK/led.out" 2>&1 &
+  pid=$!
+  for i in $(seq 1 "$LED_WAIT_TENTHS"); do
+    if ! kill -0 "$pid" 2>/dev/null; then alive=0; break; fi
+    # 이미 끝났는데 아직 거두지 않은 좀비도 kill -0에는 살아 있는 것처럼 보인다. 상태로 구분한다.
+    if ps -o stat= -p "$pid" 2>/dev/null | grep -q '^Z'; then alive=0; break; fi
+    sleep 0.1
+  done
+  if [ "$alive" = 1 ]; then
+    kill -9 "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+    return 124
+  fi
+  wait "$pid"
+  rc=$?
+  if [ "$rc" -eq 0 ]; then
+    [ -s "$WORK/led.out" ] && cat "$WORK/led.out"
+    return 0
+  fi
+  return "$rc"
 }
 
 # decide_60 현재첫인자 기준값파일있음(1/0) 앱백업상태(0/3/1) : leave | baseline | app | none
@@ -231,15 +262,17 @@ restore() {
   fi
   # 5. 표시등 해제. 표시등 속성은 passive 클라이언트만 쓸 수 있어 hidutil로는 되돌릴 수 없다(RESEARCH F3).
   # 그래서 --release-caps-led를 아는 FnCaps 바이너리를 부른다. 매핑 단계 결과와 관계없이 돈다(Auto는 시스템 기본값).
-  local led_bin led_out led_dir
+  local led_bin led_dir led_rc
   led_dir="$(cd "$(dirname "$0")" 2>/dev/null && pwd -P)"
   if led_bin="$(pick_led_binary "$running_bin" \
       "/Applications/FnCaps.app/Contents/MacOS/FnCaps" \
       "$HOME/Applications/FnCaps.app/Contents/MacOS/FnCaps" \
       "$led_dir/../build/FnCaps.app/Contents/MacOS/FnCaps")"; then
-    if led_out="$("$led_bin" "$LED_FLAG" 2>&1)"; then
-      printf '%s\n' "$led_out"
-    else
+    run_led_release "$led_bin"
+    led_rc=$?
+    if [ "$led_rc" = 124 ]; then
+      echo "표시등: 해제가 3초 안에 끝나지 않아 멈췄습니다. FnCaps를 다시 실행하면 정리됩니다." >&2
+    elif [ "$led_rc" != 0 ]; then
       echo "표시등: FnCaps를 다시 실행하면 정리됩니다." >&2
     fi
   else
@@ -333,6 +366,25 @@ selftest() {
     || { echo "FAIL 표시등 바이너리 고르기" >&2; ok=0; }
   miss="$(pick_led_binary "$no_string" "$not_exec")"; miss_rc=$?
   { [ -z "$miss" ] && [ "$miss_rc" = 1 ]; } || { echo "FAIL 표시등 바이너리 없음" >&2; ok=0; }
+  # WR-02: 표시등 해제 시간 제한. 멈춤·성공·실패 가짜 바이너리 셋으로 확인하고 남은 프로세스가 없는지 본다.
+  # 이 Mac에서 새로 만든 스크립트의 첫 exec는 macOS 검사로 몇 초 걸릴 수 있어, 재는 전에 한 번씩 데워 둔다.
+  local LED_WAIT_TENTHS=5 led_hang led_release led_break led_rc out
+  led_hang="$d/led-hang"; led_release="$d/led-release"; led_break="$d/led-break"
+  # exec라야 PID가 sleep 자신이 되어 kill로 함께 끝난다.
+  printf '#!/bin/sh\nexec sleep 61\n' >"$led_hang"
+  printf '#!/bin/sh\necho "caps-led release services=1"\nexit 0\n' >"$led_release"
+  printf '#!/bin/sh\nexit 1\n' >"$led_break"
+  chmod +x "$led_hang" "$led_release" "$led_break"
+  "$led_release" >/dev/null 2>&1 || true
+  "$led_break" >/dev/null 2>&1 || true
+  run_led_release "$led_hang"; led_rc=$?
+  [ "$led_rc" = 124 ] || { echo "FAIL 표시등 시간 제한(멈춤) 기대 124 실제 $led_rc" >&2; ok=0; }
+  pgrep -fx 'sleep 61' >/dev/null 2>&1 && { echo "FAIL 표시등 시간 제한(남은 프로세스)" >&2; ok=0; }
+  out="$(run_led_release "$led_release")"; led_rc=$?
+  { [ "$led_rc" = 0 ] && printf '%s' "$out" | grep -q 'caps-led release services=1'; } \
+    || { echo "FAIL 표시등 시간 제한(성공) 출력=$out" >&2; ok=0; }
+  run_led_release "$led_break"; led_rc=$?
+  [ "$led_rc" = 1 ] || { echo "FAIL 표시등 시간 제한(실패) 기대 1 실제 $led_rc" >&2; ok=0; }
   [ "$ok" = 1 ] || return 1
   echo "SELFTEST OK"
 }

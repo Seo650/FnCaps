@@ -36,14 +36,56 @@ public struct RestartStability: Equatable, Sendable {
     }
 }
 
+/// 이 프로세스에서 마지막 허용(ax false→true) 뒤 탭 생성(설치나 프로브)이 한 번이라도 성공했는지 센다(G-08.1-4).
+/// 깔린 적이 있으면 그 뒤의 탭 실패는 허용 직후 문제(L2)가 아니라 권한을 잃은 것이다. 철회 직후
+/// AXIsProcessTrusted가 낡은 true를 줄 수 있어(PermissionMonitor·TapRecovery 주석, LinearMouse) 실패가
+/// .failed로 온다. 재시작은 철회에 고칠 것이 없고 창만 닫는다.
+public struct GrantSession: Equatable, Sendable {
+    public private(set) var tapStartedSinceGrant = false
+    private var lossShown = false
+
+    public init() {}
+
+    public mutating func noteTapStarted() {
+        tapStartedSinceGrant = true
+        lossShown = false
+    }
+
+    public mutating func noteGrant() {
+        tapStartedSinceGrant = false
+        lossShown = false
+    }
+
+    /// 잃음을 보인 때만 표시한다. 탭을 깐 적이 없으면(권한 없음이 처음부터) 지울 것도 없다.
+    public mutating func noteLossShown() {
+        if tapStartedSinceGrant { lossShown = true }
+    }
+
+    /// 권한 없음을 보인 뒤 온 알림은 다시 허용일 수 있다. 낡은 ax가 계속 true면 noteGrant가 불리지
+    /// 않으므로 여기서 지워 L2 재시작을 되살린다. 철회 알림 자체(잃음 표시 전)로는 지우지 않는다.
+    public mutating func noteAccessibilityNotification() {
+        if lossShown {
+            tapStartedSinceGrant = false
+            lossShown = false
+        }
+    }
+}
+
 /// TapRecovery가 포기했을 때 무엇을 할지 정한다.
 public enum RecoveryFailureAction: Equatable, Sendable {
     case showPermissionNeeded, autoRestart, showReset, ignore
 
-    public static func decide(result: TapRecovery.StartResult, canRestart: Bool) -> RecoveryFailureAction {
+    /// 이미 탭을 깔았던 프로세스의 실패는 재시작하지 않고 제자리에서 권한 없음을 보인다(G-08.1-4, 2026-11-23 UAT).
+    public static func decide(
+        result: TapRecovery.StartResult,
+        canRestart: Bool,
+        tapStartedSinceGrant: Bool
+    ) -> RecoveryFailureAction {
         switch result {
         case .permissionRequired: return .showPermissionNeeded
-        case .failed: return canRestart ? .autoRestart : .showReset
+        case .failed:
+            if tapStartedSinceGrant { return .showPermissionNeeded }
+            return canRestart ? .autoRestart : .showReset
         case .started, .cancelled: return .ignore
         }
     }

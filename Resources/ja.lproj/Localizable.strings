@@ -12,8 +12,10 @@
 "setup.back" = "戻る";
 "setup.next" = "次へ";
 "setup.finish" = "完了";
-"setup.finish.confirm.title" = "初期設定を終了しますか?";
+"setup.finish.confirm.title" = "配置を選ばずに終了しますか?";
 "setup.finish.confirm.body" = "おすすめの配置は %@ でもう一度見られます。";
+"setup.finish.confirm.back" = "戻って選ぶ";
+"setup.finish.confirm.finish" = "選ばずに終了";
 "setup.welcome.title" = "FnCapsへようこそ";
 "setup.welcome.body" = "fnとCaps Lockで入力ソースを切り替えます。設定は数ステップで終わります。";
 "setup.globe.title" = "🌐キー → 入力ソースを変更";
@@ -93,6 +95,7 @@
 "status.off" = "オフ";
 "menu.turnOn" = "FnCapsをオンにする";
 "menu.turnOff" = "FnCapsをオフにする";
+"menu.resumeSetup" = "初期設定を続ける…";
 "menu.openSettings" = "設定を開く…";
 "menu.report" = "問題を報告…";
 "menu.quit" = "FnCapsを終了";

@@ -47,6 +47,11 @@ enum DS {
     static let rowMinHeight: CGFloat = s(46)
     static let pageInsetH: CGFloat = s(20)
     static let pageInsetTop: CGFloat = s(22)
+    /// 창 버튼(신호등)과 창 가장자리 사이 간격. 처음 설정 창에서 접근성 API로 잰 값이다
+    /// (macOS 27, 창 원점 548,98 → 닫기 버튼 566,116, 위·왼쪽 모두 18pt, G-08.1-16 2026-11-23 재확인 UAT).
+    /// 창 틀이 정하는 값이라 배율 s()를 곱하지 않는다(controlHeight와 같은 이유).
+    /// 처음 설정 아래 줄의 위아래 여백이 이 값을 쓴다(OnboardingView.footer).
+    static let windowChromeInset: CGFloat = 18
     static let boxCornerRadius: CGFloat = s(14)
 
     // MARK: 키 그림 치수

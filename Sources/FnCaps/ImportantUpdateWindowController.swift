@@ -61,24 +61,7 @@ final class ImportantUpdateWindowController: NSObject, NSWindowDelegate {
         }
         let host = NSHostingController(rootView: makeView(offer))
         host.sizingOptions = []
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: DS.s(420), height: DS.s(300)),
-            styleMask: [.titled, .closable, .fullSizeContentView],
-            backing: .buffered, defer: true)
-        // 제목 글자는 숨기고 창 메뉴·접근성용으로만 둔다. 설정창과 같은 방식이다.
-        window.title = L("update.important.title")
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        // 빈 도구 막대로 제목 막대를 높여 창 버튼을 모서리에서 안쪽으로 들인다. 설정창과 같다(06-02 V1).
-        window.toolbar = NSToolbar(identifier: "importantUpdate")
-        window.toolbarStyle = .unified
-        window.isReleasedWhenClosed = false
-        window.level = .normal
-        window.collectionBehavior = [.moveToActiveSpace]
-        window.standardWindowButton(.miniaturizeButton)?.isEnabled = false
-        window.standardWindowButton(.zoomButton)?.isEnabled = false
-        window.delegate = self
-        window.contentViewController = host
+        let window = AuxiliaryWindow.make(identifier: "importantUpdate", title: L("update.important.title"), contentSize: NSSize(width: DS.s(420), height: DS.s(300)), delegate: self, content: host)
         window.standardWindowButton(.closeButton)?.isEnabled = !isInstalling
         self.window = window
         self.host = host
@@ -87,7 +70,7 @@ final class ImportantUpdateWindowController: NSObject, NSWindowDelegate {
     }
 
     /// 폭 DS.s(420)을 고정하고 높이는 내용에 맞춘다. 다시 잴 때는 왼쪽 위 모서리를 그대로 둔다
-    /// (SettingsWindowController.applyWindowSize와 같은 방식).
+    /// (창 왼쪽 위 모서리를 그대로 두는 방식).
     private func layout(window: NSWindow, host: NSHostingController<ImportantUpdateView>, recenter: Bool) {
         let width = DS.s(420)
         // sizingOptions가 비어 있으면 host.view에 고유 크기 제약이 없어 fittingSize가 0에 가깝다(실제 창이

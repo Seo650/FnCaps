@@ -114,7 +114,6 @@ struct KeyRingBox: View {
             if showsFooter {
                 // 진입 언어 줄은 양옆이 같은 여백인 블록이라 구분선도 양쪽을 띄운다(UAT 2026-11-13).
                 SettingsDivider()
-                    .padding(.trailing, DS.rowInset)
                     .frame(height: Self.dividerHeight)
                 footer
             }

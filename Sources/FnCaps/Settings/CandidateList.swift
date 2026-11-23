@@ -2,27 +2,41 @@ import FnCapsCore
 import SwiftUI
 
 /// 04.4 D-07~D-12: 「FnCaps 권장」의 후보 목록(최대 3개, 추천 순서)과 그 그림 부품.
-/// 도움말 「설정하기」와 처음 설정 5단계(04.5-04)가 같은 부품을 쓴다.
-/// 확인 창은 창 컨트롤러(04.4-06)가 띄우므로 뷰는 `SettingsUIState.pendingCandidate`만 남긴다.
-/// 화면 상태는 전부 `SettingsUIState`에 두고, 크기·글꼴은 `DS` 토큰만 쓴다(새 크기 토큰 없음).
+/// 도움말 「설정하기」와 처음 설정 5단계가 같은 부품을 쓴다. 확인 창은 각 창 컨트롤러가 띄우므로
+/// 뷰는 요청만 남긴다(`CandidateRequesting`). 도움말과 처음 설정은 요청 상태를 따로 가져 확인 창이
+/// 누른 창에 붙는다(08.1 UI-SPEC 「두 창이 동시에 열릴 때」). 크기·글꼴은 `DS` 토큰만 쓴다.
+
+/// 후보 [이 설정 사용하기] 요청. 확인 창은 창 컨트롤러가 띄우므로 뷰는 요청만 남긴다.
+/// 요청이 남아 있는 동안 모든 후보 버튼이 꺼진다(T-04.4-10).
+protocol CandidateRequesting: ObservableObject {
+    var pendingCandidate: GuidancePlan? { get }
+    func requestCandidate(_ plan: GuidancePlan)
+}
+
+extension SettingsUIState: CandidateRequesting {}
 
 // MARK: - 후보 목록
 
 /// 후보 하나 = 머리 줄(권장 n · 단축키 · 최대 누름) + 「왜」 한 줄 + 축소판 + 버튼 줄.
 /// 후보 사이는 `SettingsDivider`로 나누고, 후보가 1개면 구분선이 없다(D-04).
-struct CandidateList: View {
-    @ObservedObject var ui: SettingsUIState
+struct CandidateList<Host: CandidateRequesting>: View {
+    @ObservedObject var ui: Host
+    /// 후보 그림 축소판의 화면 상태(보기 전용).
+    let miniKeys: KeysPageState
     let ready: GuidanceLayout.Ready
     let tiles: HelpTiles
     /// 처음 설정 1단계는 그림만 보이므로 버튼 줄을 끈다.
     var showsActions = true
+    /// 후보 [이 설정 사용하기]를 강조 버튼으로 그릴지. 처음 설정 5단계만 true를 넘긴다(G-08.1-13).
+    /// 도움말 「FnCaps 권장」은 기본값 false라 보통 버튼 그대로다. 어느 쪽도 Return에 묶지 않는다(D-08).
+    var prominentUse = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(ready.candidates.indices, id: \.self) { index in
                 // 후보는 둥근 상자 안 블록이라 구분선을 양쪽 모두 띄운다(오른쪽 끝까지 가면 상자 밖으로
                 // 삐져나가 보인다, 04.5 UAT).
-                if index > 0 { SettingsDivider().padding(.trailing, DS.rowInset) }
+                if index > 0 { SettingsDivider() }
                 candidate(index)
             }
         }
@@ -39,7 +53,7 @@ struct CandidateList: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            CandidatePicture(ui: ui, plan: plan, english: ready.english, tiles: tiles)
+            CandidatePicture(miniKeys: miniKeys, plan: plan, english: ready.english, tiles: tiles)
             if showsActions { actions(index, plan) }
         }
         .padding(.horizontal, DS.rowInset)
@@ -106,6 +120,11 @@ struct CandidateList: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(Text(verbatim: LF("help.cand.inUse.a11y", rank)))
+            } else if prominentUse {
+                Button(L("help.cand.use")) { ui.requestCandidate(plan) }
+                    .buttonStyle(ProminentButtonStyle())
+                    .disabled(ui.pendingCandidate != nil)
+                    .accessibilityLabel(Text(verbatim: LF("help.cand.use.a11y", rank)))
             } else {
                 Button(L("help.cand.use")) { ui.requestCandidate(plan) }
                     .buttonStyle(PillButtonStyle())
@@ -121,14 +140,14 @@ struct CandidateList: View {
 
 /// D-08: 축소판 한 벌 + 상자별 말. 말은 「어떻게 쓰는지」만 적고 「왜」는 `CandidateList`가 맡는다.
 struct CandidatePicture: View {
-    @ObservedObject var ui: SettingsUIState
+    let miniKeys: KeysPageState
     let plan: GuidancePlan
     let english: SourceID?
     let tiles: HelpTiles
 
     var body: some View {
         KeysMiniature(
-            ui: ui,
+            keys: miniKeys,
             caps: plan.caps.map { tiles.row($0) },
             fn: plan.fn.map { tiles.row($0) },
             assigned: plan.assigned.map { tiles.row($0) },
@@ -221,14 +240,14 @@ struct CandidatePicture: View {
 /// D-48 macOS 기본 그림: Caps Lock(A ↔ 직전 언어) + 🌐 고리(켜 둔 소스 전부, 회전 화살표 없음).
 /// 🌐는 최근에 쓴 순서(MRU)로 가므로 정해진 순서를 그리지 않는다. 처음 설정 1단계도 다시 쓴다.
 struct MacOSPicture: View {
-    @ObservedObject var ui: SettingsUIState
+    let miniKeys: KeysPageState
     let ready: GuidanceLayout.Ready
     let tiles: HelpTiles
 
     var body: some View {
         let caps: [SourceRow] = ready.english.map { [tiles.row($0)] } ?? []
         return KeysMiniature(
-            ui: ui,
+            keys: miniKeys,
             caps: caps,
             fn: ready.macOSGlobe.map { tiles.row($0) },
             capsCaption: L("help.setup.macos.caps"),

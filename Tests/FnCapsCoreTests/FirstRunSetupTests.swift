@@ -115,11 +115,23 @@ import Testing
     }
 
     @Test func resumeStepSkipsSatisfiedGlobeStep() {
-        #expect(FirstRunSetup.resumeStep(stored: 3, globeOK: true) == 4)
-        #expect(FirstRunSetup.resumeStep(stored: 3, globeOK: false) == 3)
-        #expect(FirstRunSetup.resumeStep(stored: 2, globeOK: true) == 2)
-        #expect(FirstRunSetup.resumeStep(stored: 5, globeOK: true) == 5)
-        #expect(FirstRunSetup.resumeStep(stored: 9, globeOK: false) == 5)
-        #expect(FirstRunSetup.resumeStep(stored: 0, globeOK: false) == 1)
+        #expect(FirstRunSetup.resumeStep(stored: 3, globeOK: true, needsGrant: false) == 4)
+        #expect(FirstRunSetup.resumeStep(stored: 3, globeOK: false, needsGrant: false) == 3)
+        #expect(FirstRunSetup.resumeStep(stored: 2, globeOK: true, needsGrant: false) == 2)
+        #expect(FirstRunSetup.resumeStep(stored: 5, globeOK: true, needsGrant: false) == 5)
+        #expect(FirstRunSetup.resumeStep(stored: 9, globeOK: false, needsGrant: false) == 5)
+        #expect(FirstRunSetup.resumeStep(stored: 0, globeOK: false, needsGrant: false) == 1)
+    }
+
+    // G-08.1-4: 권한을 주기 전에는 2단계를 넘어 열지 않는다(2단계 [다음] 비활성 G-08.1-12와 같은 조건).
+    @Test func resumeStepStopsAtPermissionUntilGranted() {
+        for stored in [3, 4, 5, 9] {
+            for globeOK in [true, false] {
+                #expect(FirstRunSetup.resumeStep(stored: stored, globeOK: globeOK, needsGrant: true) == 2)
+            }
+        }
+        #expect(FirstRunSetup.resumeStep(stored: 1, globeOK: true, needsGrant: true) == 1)
+        #expect(FirstRunSetup.resumeStep(stored: 2, globeOK: true, needsGrant: true) == 2)
+        #expect(FirstRunSetup.resumeStep(stored: 0, globeOK: true, needsGrant: true) == 1)
     }
 }

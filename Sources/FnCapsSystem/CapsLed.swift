@@ -15,12 +15,11 @@ public final class CapsLed: CapsLedWriting {
 
     private static let ledProperty = "HIDCapsLockLED" as CFString
     private static let ledOnProperty = "HIDCapsLockLEDOn" as CFString
+    /// 읽기 전용. 상태 표의 `svcState` 열에만 쓴다. 시스템 잠금을 쓰지 않는다(07-REVIEW WR-03).
     private static let stateProperty = "HIDCapsLockState" as CFString
     private static let transportProperty = "Transport" as CFString
     private static let builtInProperty = "Built-In" as CFString
     private static let productProperty = "Product" as CFString
-    /// 리매퍼가 만든 가상 키보드의 Transport 값.
-    private static let virtualTransport = "Virtual"
 
     /// 공개 헤더에 없는 함수. 종류 2 = passive. 심볼이 없으면 표시등 기능만 끈다(T-07-01).
     private typealias CreateWithType = @convention(c) (CFAllocator?, Int32, CFDictionary?) -> Unmanaged<IOHIDEventSystemClient>?
@@ -40,10 +39,9 @@ public final class CapsLed: CapsLedWriting {
 
     // MARK: 쓰기
 
+    /// `HIDCapsLockLED`만 쓴다. 시스템 잠금 상태(`HIDCapsLockState`)에는 쓰지 않는다(07-REVIEW WR-03).
     public func write(_ plan: CapsLedPlan) -> Int? {
         dispatchPrecondition(condition: .onQueue(.main))
-        // 쓸 것이 없으면 클라이언트를 만들지 않는다(IPC 없음).
-        guard plan.mode != nil || plan.syncState != nil else { return 0 }
         guard let kernel = KeyboardMapper.kernelKeyboardSet() else {
             log("led unsupported reason=noKernelSet")
             return nil
@@ -52,17 +50,9 @@ public final class CapsLed: CapsLedWriting {
         return withExtendedLifetime(client) {
             var written = 0
             for service in eligibleServices(client, kernel: kernel) {
-                var ok = true
-                if let sync = plan.syncState {
-                    let value: CFTypeRef = sync ? kCFBooleanTrue : kCFBooleanFalse
-                    ok = IOHIDServiceClientSetProperty(service, Self.stateProperty, value) && ok
-                }
-                if let mode = plan.mode {
-                    let value: CFTypeRef = mode.rawValue as CFString
-                    ok = IOHIDServiceClientSetProperty(service, Self.ledProperty, value) && ok
-                }
+                let value: CFTypeRef = plan.mode.rawValue as CFString
                 // 쓰기 직후 다시 읽어 확인하지 않는다. 필터는 늦게 반영하고, 확인은 로그·눈으로 한다.
-                if ok { written += 1 }
+                if IOHIDServiceClientSetProperty(service, Self.ledProperty, value) { written += 1 }
             }
             return written
         }
@@ -98,9 +88,9 @@ public final class CapsLed: CapsLedWriting {
                     let id = Self.registryID(of: service)
                 else { return nil }
                 let transport = Self.string(service, Self.transportProperty)
-                // 쓰기 대상 규칙과 같은 조건이다(가상 키보드와 커널 목록 밖 제외).
-                let eligible =
-                    transport != nil && transport != Self.virtualTransport && kernel?.contains(id) == true
+                // 쓰기 대상 규칙과 같은 함수를 쓴다(가상 키보드와 커널 목록 밖 제외).
+                let eligible = CapsLedTarget.isEligible(
+                    isKeyboard: true, transport: transport, registryID: id, kernel: kernel)
                 return ServiceRow(
                     registryID: id,
                     builtIn: Self.number(service, Self.builtInProperty) ?? false,
@@ -129,15 +119,15 @@ public final class CapsLed: CapsLedWriting {
         return client
     }
 
-    /// 키보드(ConformsTo 1,6)이고 `Transport`가 있으며 `Virtual`이 아니고, 매핑과 같은 커널 키보드 집합에 든 서비스.
+    /// 키보드(ConformsTo 1,6)이고 `CapsLedTarget.isEligible`을 통과한 서비스. 매핑과 같은 커널 키보드 집합에 든다.
     private func eligibleServices(_ client: IOHIDEventSystemClient, kernel: Set<UInt64>) -> [IOHIDServiceClient] {
         let all = (IOHIDEventSystemClientCopyServices(client) as? [IOHIDServiceClient]) ?? []
         return all.filter { service in
-            guard IOHIDServiceClientConformsTo(service, 1, 6) != 0 else { return false }
-            guard let transport = Self.string(service, Self.transportProperty) else { return false }
-            guard transport != Self.virtualTransport else { return false }
-            guard let id = Self.registryID(of: service), kernel.contains(id) else { return false }
-            return true
+            CapsLedTarget.isEligible(
+                isKeyboard: IOHIDServiceClientConformsTo(service, 1, 6) != 0,
+                transport: Self.string(service, Self.transportProperty),
+                registryID: Self.registryID(of: service),
+                kernel: kernel)
         }
     }
 

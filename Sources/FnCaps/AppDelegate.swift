@@ -8,6 +8,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var reports: ReportController!
     private var window: SettingsWindowController!
     private var statusItem: StatusItemController!
+    /// 처음 설정 창과 그 화면 상태(08.1 D-01, D-03). 설정 창과 함께 열 수 있고 진행 값을 함께 본다.
+    private var onboarding: OnboardingUIState!
+    private var onboardingWindow: OnboardingWindowController!
+    /// 설정 창과 처음 설정 창의 활성화 정책을 합산한다(08.1 D-03).
+    private var presence: WindowPresence!
     /// 자동 확인이 중요 표시를 찾았을 때 띄우는 창 하나(D-14, D-19-2). 시작 시각으로 포커스 규칙을 정한다.
     private var importantWindow: ImportantUpdateWindowController!
 
@@ -45,9 +50,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.start()
         updates.startAutomatic()
         reports = ReportController(defaults: .standard)
+        // 처음 설정 상태는 한 벌만 만들어 처음 설정 창과 설정 창 사이드바가 함께 본다(08.1 D-03).
+        // AppModel.start()가 시드를 끝낸 뒤에 읽는다.
+        onboarding = OnboardingUIState(firstRun: FirstRunSetup(defaults: .standard))
+        // 두 창의 활성화 정책은 이 하나가 합산한다(08.1 D-03). model 생성 뒤에 만든다.
+        presence = WindowPresence(model: model)
+        onboardingWindow = OnboardingWindowController(model: model, ui: onboarding, presence: presence) { [weak self] highlight in
+            self?.window.showKeys(highlight: highlight)
+        }
         let restarted = CommandLine.arguments.contains(AppRestart.showSettingsArgument)
-        window = SettingsWindowController(model: model, updates: updates, reports: reports)
-        statusItem = StatusItemController(model: model, updates: updates, openSettings: { [weak self] page in
+        window = SettingsWindowController(
+            model: model, updates: updates, reports: reports,
+            onboarding: onboarding, presence: presence,
+            openOnboarding: { [weak self] in self?.onboardingWindow.show() })
+        statusItem = StatusItemController(model: model, updates: updates, onboarding: onboarding, openSettings: { [weak self] page in
             // 메뉴가 닫힌 뒤에 연다. 메뉴 추적 중에 활성화하면 창이 뒤에 남을 때가 있다.
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -58,21 +74,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.window.show(page: page)
                 }
             }
+        }, openOnboarding: { [weak self] in
+            // 「처음 설정 계속…」도 같은 이유로 메뉴가 닫힌 뒤에 연다.
+            DispatchQueue.main.async { self?.onboardingWindow.show() }
         })
         installMainMenu()
         // 처음 실행·재시작(재설정 버튼을 봐야 함)·직접 연 실행은 창을 띄운다. 로그인 자동 실행만 조용히 둔다.
-        AppLog.info("launch first=\(model.isFirstLaunch) restarted=\(restarted) login=\(launchedAsLoginItem.map(String.init) ?? "unknown") event=\(launchEventNote) setup=\(FirstRunSetup(defaults: .standard).opensInSetupMode)")
+        AppLog.info("launch first=\(model.isFirstLaunch) restarted=\(restarted) login=\(launchedAsLoginItem.map(String.init) ?? "unknown") event=\(launchEventNote) setup=\(onboarding.firstRun.opensInSetupMode)")
         if LaunchWindowPolicy.shouldShow(firstLaunch: model.isFirstLaunch, restarted: restarted,
                                          loginItem: launchedAsLoginItem) {
-            window.show()
+            showLaunchWindow()
         }
         // 업데이트 도우미가 띄운 실행이면 여기서 영수증에 pid를 남긴다(D-08).
         UpdateReceipt.writeIfRequested()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        window.show()
+        showLaunchWindow()
         return true
+    }
+
+    /// 시작·다시 열기의 창 하나: 처음 설정 대상이고 아직 나가지 않았으면 처음 설정 창, 아니면 설정 창.
+    /// 두 창을 함께 열지 않는다(08.1 UI-SPEC 「열기」 표 첫 행). 로그인 항목 실행은 호출부가 거른다.
+    private func showLaunchWindow() {
+        if onboarding.firstRun.opensInSetupMode {
+            onboardingWindow.show()
+        } else {
+            window.show()
+        }
     }
 
     /// 종료 전에 Caps 경로가 바꾼 시스템 값을 되돌린다. 결과와 무관하게 항상 종료에 답한다

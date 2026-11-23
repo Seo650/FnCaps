@@ -138,13 +138,17 @@ import Testing
 }
 
 @Suite struct RealGlobePolicyRouteTests {
-    @Test func passesToOSOnlyForUsageOneAndCalm() {
+    @Test func passesToOSForUsageOneOrUnsetAndCalm() {
         #expect(FnRoutePolicy.changeInputSourceUsage == 1)
         #expect(FnRoutePolicy.decide(isSwitch: true, usage: 1, rapid: false, alreadySwitching: false) == .passToOS)
         for u in [0, 2, 3] as [Int?] {
             #expect(FnRoutePolicy.decide(isSwitch: true, usage: u, rapid: false, alreadySwitching: false) == .inApp)
         }
-        #expect(FnRoutePolicy.decide(isSwitch: true, usage: nil, rapid: false, alreadySwitching: false) == .inApp)
+        // 새 계정은 키가 없다. 1로 본다(D-10)
+        #expect(FnRoutePolicy.decide(isSwitch: true, usage: nil, rapid: false, alreadySwitching: false) == .passToOS)
+        #expect(FnRoutePolicy.decide(isSwitch: true, usage: nil, rapid: true, alreadySwitching: false) == .inApp)
+        #expect(FnRoutePolicy.decide(isSwitch: true, usage: nil, rapid: false, alreadySwitching: true) == .inApp)
+        #expect(FnRoutePolicy.decide(isSwitch: false, usage: nil, rapid: false, alreadySwitching: false) == .inApp)
         #expect(FnRoutePolicy.decide(isSwitch: true, usage: 1, rapid: true, alreadySwitching: false) == .inApp)
         #expect(FnRoutePolicy.decide(isSwitch: true, usage: 1, rapid: false, alreadySwitching: true) == .inApp)
         #expect(FnRoutePolicy.decide(isSwitch: false, usage: 1, rapid: false, alreadySwitching: false) == .inApp)

@@ -16,8 +16,8 @@ enum SettingsRenderHarness {
         var setup: (SettingsUIState, UpdateController, ReportController) -> Void = { _, _, _ in }
         /// 첫 배치 뒤 차례로 부를 단계. 단계마다 다시 배치해 영역 좌표가 채워진 뒤에 다음 단계를 한다(04-17 끌기 장면).
         var postLayout: [(SettingsUIState) -> Void] = []
-        /// 처음 설정 장면의 창 높이를 바꾼다. 실제 크기(500)가 아니므로 스크롤 밖에 있는 부분을 볼 때만 쓴다.
-        var setupHeight: CGFloat? = nil
+        /// 사이드바 「처음 설정 n/5」 행을 보일 때의 메모리 저장 단계. nil이면 행이 없다.
+        var onboardingStep: Int? = nil
     }
 
     static func run(outputDir: URL) -> Int32 {
@@ -32,13 +32,15 @@ enum SettingsRenderHarness {
         let lang = Bundle.main.preferredLocalizations.first ?? "en"
         let fx = Fixtures(lang: lang)
         var scenes = makeScenes(fx)
+        var onboarding = onboardingScenes(fx)
         var important = importantScenes(lang: lang)
         if let only = ProcessInfo.processInfo.environment["FNCAPS_RENDER_ONLY"], !only.isEmpty {
             let names = Set(only.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
             scenes = scenes.filter { names.contains($0.name) }
+            onboarding = onboarding.filter { names.contains($0.name) }
             important = important.filter { names.contains($0.name) }
-            // 설정창 장면과 중요 업데이트 창 장면을 모두 걸러 낸 뒤에야 실패로 본다.
-            if scenes.isEmpty && important.isEmpty {
+            // 설정창·처음 설정·중요 업데이트 장면을 모두 걸러 낸 뒤에야 실패로 본다.
+            if scenes.isEmpty && onboarding.isEmpty && important.isEmpty {
                 fail("FNCAPS_RENDER_ONLY에 맞는 장면이 없습니다: \(only)")
                 return 1
             }
@@ -59,15 +61,28 @@ enum SettingsRenderHarness {
             // KeysPage가 새 소스 알림을 지우며 defaults를 쓰지 않도록 창은 보이지 않는 상태로 둔다(T-04-41).
             ui.windowVisible = false
             ui.selectedPage = scene.page
+            // 처음 설정 진행은 장면마다 메모리 저장 상태로 새로 둔다(사용자 defaults에 쓰지 않는다, T-04.4-04).
+            let onboarding = OnboardingUIState()
+            if let step = scene.onboardingStep { onboarding.firstRun.setStep(step) }
             updates.debugSet(phase: .done(.upToDate(latest: UpdateController.currentVersion)),
                              lastChecked: fixedCheckTime)
             // 쪽마다 미리보기가 준비된 대기 상태에서 시작한다. 신고 장면은 setup에서 덮어쓴다.
             reports.debugSet(phase: .idle, preview: reportPreviewFixture)
             scene.setup(ui, updates, reports)
             let file = "\(lang)-\(scene.name).png"
-            if render(SettingsRootView(model: model, ui: ui, updates: updates, reports: reports),
+            if render(SettingsRootView(model: model, ui: ui, onboarding: onboarding,
+                                       openOnboarding: {}, updates: updates, reports: reports),
                       ui: ui, scene: scene,
                       to: outputDir.appendingPathComponent(file)) {
+                written.append(file)
+            } else {
+                failed = true
+            }
+        }
+        // 처음 설정 창은 폭이 설정 창과 다르고(600) 뷰가 바탕을 깐다. 설정 창 장면 뒤에 그려 같은 목록에 이어 적는다.
+        for scene in onboarding {
+            let file = "\(lang)-\(scene.name).png"
+            if renderOnboarding(scene, model: model, to: outputDir.appendingPathComponent(file)) {
                 written.append(file)
             } else {
                 failed = true
@@ -93,10 +108,8 @@ enum SettingsRenderHarness {
     }
 
     private static func render(_ root: SettingsRootView, ui: SettingsUIState, scene: Scene, to url: URL) -> Bool {
-        // 처음 설정 장면은 실제 창처럼 600×500으로 그린다(04.4 UAT U-9).
-        let size = ui.setupMode
-            ? NSSize(width: DS.s(600), height: DS.s(scene.setupHeight ?? 500))
-            : NSSize(width: DS.s(690), height: scene.height)
+        // 설정 창은 늘 690×675(×DS.scale)이고 처음 설정은 별도 하니스가 그린다.
+        let size = NSSize(width: DS.s(690), height: scene.height)
         let view = NSHostingView(rootView: root)
         view.frame = NSRect(origin: .zero, size: size)
         view.appearance = NSAppearance(named: scene.dark ? .darkAqua : .aqua)
@@ -116,7 +129,7 @@ enum SettingsRenderHarness {
         }
         rep.size = size
         view.cacheDisplay(in: view.bounds, to: rep)
-        guard rep.pixelsWide >= Int(DS.s(600) * 2),  // 처음 설정 장면 폭(600)까지 허용
+        guard rep.pixelsWide >= Int(DS.s(690) * 2),  // 설정 창 폭(690)
               let png = rep.representation(using: .png, properties: [:]), !png.isEmpty
         else {
             fail("렌더 실패(PNG 비었음 또는 폭 부족): \(scene.name)")
@@ -219,9 +232,88 @@ enum SettingsRenderHarness {
         }
     }
 
+    // MARK: 처음 설정 창(08.1-03)
+
+    /// 처음 설정 뷰(`OnboardingView`, 순수 뷰)를 창 크기 DS.s(600)×DS.s(500)으로 그린다.
+    /// 진행 상태는 메모리 저장(`OnboardingUIState()`)이라 사용자 defaults에 쓰지 않는다(T-08.1-11, T-04.4-04).
+    private struct OnboardingScene {
+        let name: String
+        let dark: Bool
+        let step: Int
+        var branch = false
+        /// 실제 창은 500이다. 스크롤 밖에 있는 5단계 목록 전체를 볼 때만 늘린다.
+        var height: CGFloat = 500
+        let fixture: (inout AppSnapshot) -> Void
+    }
+
+    private static func onboardingScenes(_ fx: Fixtures) -> [OnboardingScene] {
+        [
+            OnboardingScene(name: "onboarding-1", dark: false, step: 1, fixture: fx.base),
+            OnboardingScene(name: "onboarding-1-dark", dark: true, step: 1, fixture: fx.base),
+            OnboardingScene(name: "onboarding-2", dark: false, step: 2, fixture: fx.permission),
+            OnboardingScene(name: "onboarding-2-dark", dark: true, step: 2, fixture: fx.permission),
+            OnboardingScene(name: "onboarding-2-granted", dark: false, step: 2, fixture: fx.base),
+            OnboardingScene(name: "onboarding-2-conflict", dark: false, step: 2, fixture: fx.detected),
+            OnboardingScene(name: "onboarding-2-stuck", dark: false, step: 2, fixture: fx.stuck),
+            OnboardingScene(name: "onboarding-2-lost", dark: false, step: 2, fixture: fx.lost),
+            OnboardingScene(name: "onboarding-3", dark: false, step: 3, fixture: fx.globe),
+            OnboardingScene(name: "onboarding-3-ok", dark: false, step: 3, fixture: fx.base),
+            OnboardingScene(name: "onboarding-4", dark: false, step: 4, fixture: fx.base),
+            OnboardingScene(name: "onboarding-4-dark", dark: true, step: 4, fixture: fx.base),
+            OnboardingScene(name: "onboarding-5", dark: false, step: 5, fixture: { fx.help(count: 4, &$0) }),
+            OnboardingScene(name: "onboarding-5-dark", dark: true, step: 5, fixture: { fx.help(count: 4, &$0) }),
+            OnboardingScene(name: "onboarding-5-single", dark: false, step: 5, fixture: { fx.help(count: 1, &$0) }),
+            // 5단계 목록 전체. 키 그림이 폭 안에 들어오고 잘리지 않는지 보는 용도다.
+            OnboardingScene(name: "onboarding-5-full", dark: false, step: 5, height: 1750,
+                            fixture: { fx.help(count: 4, &$0) }),
+            OnboardingScene(name: "onboarding-5-custom", dark: false, step: 5, branch: true,
+                            fixture: { fx.help(count: 4, &$0) }),
+            OnboardingScene(name: "onboarding-5-custom-dark", dark: true, step: 5, branch: true,
+                            fixture: { fx.help(count: 4, &$0) }),
+        ]
+    }
+
+    private static func renderOnboarding(_ scene: OnboardingScene, model: AppModel, to url: URL) -> Bool {
+        var s = model.snapshot
+        scene.fixture(&s)
+        model.debugSnapshotOverride = s
+        let ui = OnboardingUIState()
+        ui.setupStep = scene.step
+        ui.setupBranch = scene.branch
+        let content = OnboardingView(model: model, ui: ui, close: {}, finish: {})
+        let size = NSSize(width: DS.s(600), height: DS.s(scene.height))
+        let view = NSHostingView(rootView: content)
+        view.frame = NSRect(origin: .zero, size: size)
+        view.appearance = NSAppearance(named: scene.dark ? .darkAqua : .aqua)
+        settle(view)
+
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: Int(size.width * 2), pixelsHigh: Int(size.height * 2),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else {
+            fail("렌더 실패(비트맵 없음): \(scene.name)")
+            return false
+        }
+        rep.size = size
+        view.cacheDisplay(in: view.bounds, to: rep)
+        guard rep.pixelsWide >= Int(DS.s(600) * 2),
+              let png = rep.representation(using: .png, properties: [:]), !png.isEmpty
+        else {
+            fail("렌더 실패(PNG 비었음 또는 폭 부족): \(scene.name)")
+            return false
+        }
+        do {
+            try png.write(to: url)
+            return true
+        } catch {
+            fail("쓰기 실패: \(scene.name) \(error)")
+            return false
+        }
+    }
+
     /// 배치하고, 선호값으로 전달되는 좌표가 한 번 더 돌게 한 뒤 다시 배치한다.
-    private static func settle(_ view: NSView) {
-        view.layoutSubtreeIfNeeded()
+    private static func settle(_ view: NSView) {        view.layoutSubtreeIfNeeded()
         RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         view.layoutSubtreeIfNeeded()
     }
@@ -407,56 +499,9 @@ enum SettingsRenderHarness {
             Scene(name: "help-cand-4-dark", page: .help, dark: true, height: DS.s(1400), fixture: { fx.help(count: 4, &$0) }),
             // 04.4 D-12: 권장 1(Caps [한, 영] + fn [일, 중])이 사용 중.
             Scene(name: "help-cand-inuse1", page: .help, dark: false, height: DS.s(1400), fixture: { fx.helpInUse1(&$0) }),
-            // 04.5: 처음 설정 5단계(실제 창 크기). 진행값은 메모리 저장이다.
-            Scene(name: "setup-1", page: .general, dark: false, fixture: fx.base,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 1 }),
-            Scene(name: "setup-1-dark", page: .general, dark: true, fixture: fx.base,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 1 }),
-            Scene(name: "setup-2", page: .general, dark: false, fixture: fx.permission,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 2 }),
-            Scene(name: "setup-2-dark", page: .general, dark: true, fixture: fx.permission,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 2 }),
-            Scene(name: "setup-2-trusted", page: .general, dark: false, fixture: fx.base,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 2 }),
-            // 권한 있음 + 키 변경 앱이 실행 중인 경고(APP-22).
-            Scene(name: "setup-2-conflict", page: .general, dark: false, fixture: fx.detected,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 2 }),
-            // 권한이 꺼지고 다시 켜도 키를 읽지 못하는 막힘 상태.
-            Scene(name: "setup-2-stuck", page: .general, dark: false, fixture: fx.stuck,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 2 }),
-            // 권한을 잃은 상태.
-            Scene(name: "setup-2-lost", page: .general, dark: false, fixture: fx.lost,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 2 }),
-            Scene(name: "setup-3", page: .general, dark: false, fixture: fx.globe,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 3 }),
-            // 🌐 값이 권장과 같아 「같음」 상자를 보이는 상태.
-            Scene(name: "setup-3-ok", page: .general, dark: false, fixture: fx.base,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 3 }),
-            Scene(name: "setup-4", page: .general, dark: false, fixture: fx.base,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 4 }),
-            Scene(name: "setup-4-dark", page: .general, dark: true, fixture: fx.base,
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 4 }),
-            Scene(name: "setup-5", page: .general, dark: false, fixture: { fx.help(count: 4, &$0) },
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 5 }),
-            Scene(name: "setup-5-dark", page: .general, dark: true, fixture: { fx.help(count: 4, &$0) },
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 5 }),
-            Scene(name: "setup-5-single", page: .general, dark: false, fixture: { fx.help(count: 1, &$0) },
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 5 }),
-            // 5단계 목록 전체(실제 창은 500이라 스크롤이 필요하다). 「직접 설정」 행과 chevron을 보려고 높인 장면이다.
-            Scene(name: "setup-5-full", page: .general, dark: false, fixture: { fx.help(count: 4, &$0) },
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 5 }, setupHeight: 1750),
-            Scene(name: "setup-5-full-hover", page: .general, dark: false, fixture: { fx.help(count: 4, &$0) },
-                  setup: { ui, _, _ in
-                      ui.setupMode = true; ui.setupStep = 5; ui.setupCustomHover = true
-                  }, setupHeight: 1750),
-            // 같은 5단계 안 「직접 설정」 분기 쪽. 분기 여부는 저장하지 않는다(S-17).
-            Scene(name: "setup-5-custom", page: .general, dark: false, fixture: { fx.help(count: 4, &$0) },
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 5; ui.setupBranch = true }),
-            Scene(name: "setup-5-custom-dark", page: .general, dark: true, fixture: { fx.help(count: 4, &$0) },
-                  setup: { ui, _, _ in ui.setupMode = true; ui.setupStep = 5; ui.setupBranch = true }),
-            // 04.4 D-16·D-17: 사이드바 「처음 설정 n/5」 행.
+            // 04.4 D-16·D-17: 사이드바 「처음 설정 n/5」 행. 처음 설정 화면 자체는 onboarding-* 하니스가 그린다.
             Scene(name: "sidebar-setup", page: .general, dark: false, fixture: fx.permission,
-                  setup: { ui, _, _ in ui.firstRun.setStep(2) }),
+                  onboardingStep: 2),
             // 04.4 D-21: 푸터에 설명 줄 없이 제목 옆 ⓘ(팝오버는 오프스크린에 안 나올 수 있다).
             Scene(name: "keys-entry-info", page: .keys, dark: false, fixture: fx.entry2,
                   setup: { ui, _, _ in ui.keys.entryInfoOpen = .fn }),

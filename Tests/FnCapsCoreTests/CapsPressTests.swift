@@ -243,7 +243,7 @@ import Testing
     /// Caps 목록에 영어가 있으면 그 영어.
     @Test func englishInCapsList() {
         let target = CapsLongRule.englishTarget(
-            caps: ["abc", "ko"], fn: ["ja"], excluded: [],
+            caps: ["abc", "ko"], fn: ["ja"], assigned: [], excluded: [],
             sources: [Self.abc, Self.us, Self.ko, Self.ja])
         #expect(target == "abc")
     }
@@ -251,49 +251,70 @@ import Testing
     /// 영어가 fn 목록에만 있어도 그 영어로 간다(2026-11-21 사용자 결정).
     @Test func englishOnlyInFnList() {
         let target = CapsLongRule.englishTarget(
-            caps: ["ko"], fn: ["abc"], excluded: [], sources: [Self.abc, Self.ko])
+            caps: ["ko"], fn: ["abc"], assigned: [], excluded: [], sources: [Self.abc, Self.ko])
         #expect(target == "abc")
     }
 
     /// 영어가 「사용 안 함」에만 있어도 그 영어로 간다.
     @Test func englishOnlyInExcluded() {
         let target = CapsLongRule.englishTarget(
-            caps: ["ko"], fn: ["ja"], excluded: ["abc"], sources: [Self.abc, Self.ko, Self.ja])
+            caps: ["ko"], fn: ["ja"], assigned: [], excluded: ["abc"], sources: [Self.abc, Self.ko, Self.ja])
         #expect(target == "abc")
     }
 
-    /// 영어가 둘이면 Caps → fn → 사용 안 함 순서로 앞 목록의 영어.
+    /// 영어가 둘이면 Caps → fn → 지정 → 사용 안 함 순서로 앞 목록의 영어.
     @Test func listOrderWins() {
         let target = CapsLongRule.englishTarget(
-            caps: [], fn: ["abc"], excluded: ["us"], sources: [Self.abc, Self.us])
+            caps: [], fn: ["abc"], assigned: [], excluded: ["us"], sources: [Self.abc, Self.us])
         #expect(target == "abc")
     }
 
     /// Caps 목록의 영어가 fn 목록의 영어보다 앞선다.
     @Test func capsBeforeFn() {
         let target = CapsLongRule.englishTarget(
-            caps: ["us"], fn: ["abc"], excluded: [], sources: [Self.abc, Self.us])
+            caps: ["us"], fn: ["abc"], assigned: [], excluded: [], sources: [Self.abc, Self.us])
         #expect(target == "us")
     }
 
     /// 같은 목록에 영어가 둘이면 놓인 순서의 앞 영어.
     @Test func placementOrderWithinList() {
         let target = CapsLongRule.englishTarget(
-            caps: ["us", "abc"], fn: [], excluded: [], sources: [Self.abc, Self.us])
+            caps: ["us", "abc"], fn: [], assigned: [], excluded: [], sources: [Self.abc, Self.us])
         #expect(target == "us")
     }
 
     /// 꺼진 소스는 후보에서 뺀다.
     @Test func disabledSourceIgnored() {
         let target = CapsLongRule.englishTarget(
-            caps: ["abc"], fn: [], excluded: [], sources: [Self.ko])
+            caps: ["abc"], fn: [], assigned: [], excluded: [], sources: [Self.ko])
         #expect(target == nil)
     }
 
     /// 영어가 하나도 없으면 nil(전환 없이 잠금만 바꾼다).
     @Test func noEnglishReturnsNil() {
         let target = CapsLongRule.englishTarget(
-            caps: ["ko"], fn: ["ja"], excluded: [], sources: [Self.ko, Self.ja])
+            caps: ["ko"], fn: ["ja"], assigned: [], excluded: [], sources: [Self.ko, Self.ja])
         #expect(target == nil)
+    }
+
+    /// 영어가 지정 단축키 목록에만 있어도 그 영어로 간다(07-REVIEW WR-01).
+    @Test func englishOnlyInAssigned() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["ko"], fn: ["ja"], assigned: ["abc"], excluded: [], sources: [Self.abc, Self.ko, Self.ja])
+        #expect(target == "abc")
+    }
+
+    /// fn과 지정 둘 다에 영어가 있으면 fn 쪽 영어(07-REVIEW WR-01).
+    @Test func fnBeforeAssigned() {
+        let target = CapsLongRule.englishTarget(
+            caps: ["ko"], fn: ["abc"], assigned: ["us"], excluded: [], sources: [Self.abc, Self.us, Self.ko])
+        #expect(target == "abc")
+    }
+
+    /// 지정 목록의 영어가 「사용 안 함」보다 앞선다(07-REVIEW WR-01).
+    @Test func assignedBeforeExcluded() {
+        let target = CapsLongRule.englishTarget(
+            caps: [], fn: [], assigned: ["us"], excluded: ["abc"], sources: [Self.abc, Self.us])
+        #expect(target == "us")
     }
 }

@@ -33,11 +33,13 @@ struct SettingsGroup<Content: View>: View {
     }
 }
 
-/// 상자 안 행 사이 선. 왼쪽을 inset만큼 들여 쓴다.
+/// 상자 안 행 사이 선. 왼쪽을 inset만큼, 오른쪽을 trailing(기본 DS.rowInset)만큼 띄워 행 글자와 같은 자리에서 끝낸다
+/// (04.5 UAT F-4, G-08.1-11, 2026-11-23 사용자: 상자 안 모든 선). 오른쪽 여백을 부르는 곳마다 따로 붙이지 않는다.
 struct SettingsDivider: View {
     var inset: CGFloat = DS.rowInset
+    var trailing: CGFloat = DS.rowInset
 
     var body: some View {
-        Divider().padding(.leading, inset)
+        Divider().padding(.leading, inset).padding(.trailing, trailing)
     }
 }

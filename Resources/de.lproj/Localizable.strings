@@ -12,8 +12,10 @@
 "setup.back" = "Zurück";
 "setup.next" = "Weiter";
 "setup.finish" = "Fertig";
-"setup.finish.confirm.title" = "Einrichtung beenden?";
+"setup.finish.confirm.title" = "Ohne Auswahl einer Belegung beenden?";
 "setup.finish.confirm.body" = "Die empfohlenen Belegungen finden Sie wieder unter %@.";
+"setup.finish.confirm.back" = "Zurück und auswählen";
+"setup.finish.confirm.finish" = "Ohne Belegung beenden";
 "setup.welcome.title" = "Willkommen bei FnCaps";
 "setup.welcome.body" = "Eingabequellen mit fn und Caps Lock wechseln. Die Einrichtung dauert nur wenige Schritte.";
 "setup.globe.title" = "🌐-Taste → Eingabequelle ändern";
@@ -92,6 +94,7 @@
 "status.off" = "Aus";
 "menu.turnOn" = "FnCaps einschalten";
 "menu.turnOff" = "FnCaps ausschalten";
+"menu.resumeSetup" = "Ersteinrichtung fortsetzen…";
 "menu.openSettings" = "Einstellungen öffnen…";
 "menu.report" = "Problem melden…";
 "menu.quit" = "FnCaps beenden";

@@ -12,8 +12,10 @@
 "setup.back" = "이전";
 "setup.next" = "다음";
 "setup.finish" = "마침";
-"setup.finish.confirm.title" = "처음 설정을 마칠까요?";
+"setup.finish.confirm.title" = "배치를 고르지 않고 마칠까요?";
 "setup.finish.confirm.body" = "권장 배치는 %@에서 다시 볼 수 있습니다.";
+"setup.finish.confirm.back" = "돌아가서 고르기";
+"setup.finish.confirm.finish" = "고르지 않고 마치기";
 "setup.welcome.title" = "FnCaps에 오신 것을 환영합니다";
 "setup.welcome.body" = "fn과 Caps Lock으로 입력 소스를 바꿉니다. 몇 단계만 설정하면 됩니다.";
 "setup.globe.title" = "🌐 키 → 입력 소스 변경";
@@ -92,6 +94,7 @@
 "status.off" = "꺼짐";
 "menu.turnOn" = "FnCaps 켜기";
 "menu.turnOff" = "FnCaps 끄기";
+"menu.resumeSetup" = "처음 설정 계속…";
 "menu.openSettings" = "설정 열기…";
 "menu.report" = "문제 알리기…";
 "menu.quit" = "FnCaps 종료";

@@ -2,11 +2,13 @@ import FnCapsCore
 import SwiftUI
 
 /// 처음 설정 2단계(손쉬운 사용 권한, UI-SPEC §6-2, APP-02·APP-22).
-/// 「일반」 쪽 권한 상자를 재사용하지 않고 가운데 전용 화면으로 그린다(2026-11-14 사용자 결정).
+/// 「일반」 쪽 권한 상자를 재사용하지 않고 전용 화면으로 그린다(2026-11-14 사용자 결정).
+/// 머리는 08.1 사용자 선택(2026-11-22)의 머리 B(앱 아이콘 + 제목 + 이유)를 쓰고 본문은 왼쪽 정렬이다.
 /// 상태 값만 `model.snapshot`에서 읽는다.
 struct SetupPermissionStep: View {
     @ObservedObject var model: AppModel
-    @ObservedObject var ui: SettingsUIState
+    /// Return을 화면 안 권한 버튼에 묶는지(`OnboardingButtonRule.defaultAction == .openAccessibility`).
+    var opensDefault: Bool = true
 
     private var snapshot: AppSnapshot { model.snapshot }
 
@@ -21,66 +23,54 @@ struct SetupPermissionStep: View {
             : "general.desc.permission"
     }
 
+    /// macOS 27의 이름 변경을 이 화면에서 알린다(08.1 RESEARCH 결론 4). 기존 키만 쓰고 새 번역은 없다.
+    private var pathKey: String {
+        PermissionGuide.pathKey(osMajor: ProcessInfo.processInfo.operatingSystemVersion.majorVersion)
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            iconTile
+        VStack(alignment: .leading, spacing: 0) {
+            SetupStepHeader(title: Text(verbatim: L("settings.permission.title")),
+                            subtitle: L(reasonKey))
                 .padding(.bottom, DS.groupSpacing)
-            Text(verbatim: L("settings.permission.title"))
-                .font(DS.pageTitle)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-                .padding(.bottom, DS.s(8))
-            Text(verbatim: L(reasonKey))
-                .font(DS.rowTitle)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(DS.s(2))
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, DS.groupSpacing)
-            buttonZone
-            if isStuck {
-                stuckNotes
-                    .padding(.top, DS.s(8))
-            }
-            warnings
-                .padding(.top, DS.groupSpacing)
+            permissionBody
         }
-        .frame(maxWidth: DS.s(420))
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// 버튼 칸 → 경로 줄 → 막힘 안내 → 경고.
+    @ViewBuilder
+    private var permissionBody: some View {
+        buttonZone
+        pathLine
+            .padding(.top, DS.s(8))
+        if isStuck {
+            stuckNotes
+                .padding(.top, DS.s(8))
+        }
+        warnings
+            .padding(.top, DS.groupSpacing)
     }
 
     // MARK: 부품
 
-    /// 아이콘 칸(S-12): 설정 상자와 같은 바탕·모서리라 1단계 앱 아이콘(80)과 같은 발자국이다.
-    private var iconTile: some View {
-        RoundedRectangle(cornerRadius: DS.boxCornerRadius, style: .continuous)
-            .fill(DS.boxFill)
-            .frame(width: DS.s(80), height: DS.s(80))
-            .overlay {
-                Image(systemName: "accessibility")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: DS.s(40), height: DS.s(40))
-                    .foregroundStyle(.primary)
-            }
-            .accessibilityHidden(true)
-    }
-
     /// 버튼 칸(S-13): 높이를 늘 예약해 허용 전후에 아래가 밀리지 않는다.
+    /// Return은 규칙이 [손쉬운 사용 설정 열기]를 기본 버튼으로 고를 때만 묶는다.
     private var buttonZone: some View {
         Group {
             switch snapshot.permissionPanel {
             case .grant:
-                Button(L("general.permission.open")) { model.openAccessibilitySettings() }
-                    .buttonStyle(ProminentButtonStyle())
-                    .keyboardShortcut(.defaultAction)
+                HStack(spacing: 0) {
+                    accessibilityButton
+                    Spacer(minLength: 0)
+                }
             case .hidden:
                 HStack(spacing: DS.s(6)) {
                     StatusDot(color: DS.ok)
                     Text(verbatim: L("settings.permission.granted"))
                         .font(DS.controlFont)
                         .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
                 }
                 .accessibilityElement(children: .combine)
             case .stuck, .stuckResetFailed:
@@ -88,17 +78,35 @@ struct SetupPermissionStep: View {
                 Color.clear
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: DS.controlHeight)
+    }
+
+    private var accessibilityButton: some View {
+        Button(L("general.permission.open")) { model.openAccessibilitySettings() }
+            .buttonStyle(ProminentButtonStyle())
+            .keyboardShortcut(opensDefault ? .defaultAction : nil)
+    }
+
+    /// 설정 경로 한 줄(UI-SPEC 2단계 2번): 버튼 칸 바로 아래. 권한이 있을 때만 보인다.
+    @ViewBuilder
+    private var pathLine: some View {
+        if snapshot.permissionPanel == .grant {
+            Text(verbatim: L(pathKey))
+                .font(DS.caption)
+                .foregroundStyle(.secondary)
+                .lineSpacing(DS.s(2))
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     /// 권한이 막혔을 때의 안내. 상자를 만들지 않고 글과 버튼만 둔다(§6-2 「권한 잃음·막힘」).
     private var stuckNotes: some View {
-        VStack(spacing: DS.s(8)) {
+        VStack(alignment: .leading, spacing: DS.s(8)) {
             Text(verbatim: L("permission.stuck.body"))
                 .font(DS.caption)
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
                 .lineSpacing(DS.s(2))
                 .fixedSize(horizontal: false, vertical: true)
             Button(L("permission.stuck.button")) { model.resetPermission() }
@@ -108,17 +116,17 @@ struct SetupPermissionStep: View {
                 Text(verbatim: L("permission.relist"))
                     .font(DS.caption)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
                     .lineSpacing(DS.s(2))
                     .fixedSize(horizontal: false, vertical: true)
                 Button(L("permission.button")) { model.openAccessibilitySettings() }
                     .buttonStyle(PillButtonStyle())
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// APP-02는 늘 보이고(닫기 없음), APP-22는 권한이 없으면 늘, 있으면 키 변경 앱이 실행 중이고
-    /// 닫지 않았을 때만 보인다(D-40). 두 경고는 같은 폭(가운데 열 420)이다.
+    /// 닫지 않았을 때만 보인다(D-40). 두 경고는 같은 폭(내용 폭 전체)이다.
     private var warnings: some View {
         VStack(spacing: DS.groupSpacing) {
             WarningNote(text: L("permission.warning"))

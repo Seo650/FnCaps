@@ -3,29 +3,32 @@ import Combine
 import FnCapsCore
 import SwiftUI
 
-/// 창은 하나뿐. 열려 있는 동안만 .regular, 닫으면 .accessory로 복귀한다.
+/// 설정 창은 하나뿐이다. 처음 설정은 별도 창(OnboardingWindowController)이다(08.1 D-01).
+/// 활성화 정책은 WindowPresence가 처음 설정 창과 합산한다(08.1 D-03): 둘 다 닫혔을 때만 .accessory로 복귀한다.
 final class SettingsWindowController: NSObject, NSWindowDelegate {
     private let model: AppModel
     private let reports: ReportController
+    private let presence: WindowPresence
     private let window: NSWindow
     private let host: NSHostingController<SettingsRootView>
-    /// 처음 설정 진행 저장(04.4 D-18). 시험·렌더는 빈 suite를 넘길 수 있다.
-    private let defaults: UserDefaults
     let ui: SettingsUIState
     private var centered = false
     private var cancellables = Set<AnyCancellable>()
 
     init(model: AppModel, updates: UpdateController, reports: ReportController,
-         defaults: UserDefaults = .standard) {
+         onboarding: OnboardingUIState, presence: WindowPresence,
+         openOnboarding: @escaping () -> Void) {
         self.model = model
         self.reports = reports
-        self.defaults = defaults
-        ui = SettingsUIState(firstRun: FirstRunSetup(defaults: defaults))
+        self.presence = presence
+        ui = SettingsUIState()
         window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: DS.s(690), height: DS.s(675)),
             styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: true)
         host = NSHostingController(
-            rootView: SettingsRootView(model: model, ui: ui, updates: updates, reports: reports))
+            rootView: SettingsRootView(model: model, ui: ui, onboarding: onboarding,
+                                       openOnboarding: openOnboarding,
+                                       updates: updates, reports: reports))
         super.init()
         // 제목 글자는 숨기고 창 메뉴·접근성용으로만 둔다. 제목 막대는 내용과 합친다(R2).
         window.title = L("window.title")
@@ -66,23 +69,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 self.handleReportSent()
             }
             .store(in: &cancellables)
-        // 04.4 UAT U-9: 처음 설정 동안은 단계 화면에 맞게 창을 줄이고, 나가면 평소 크기로 돌린다.
-        ui.$setupMode
-            .removeDuplicates()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] setup in self?.applyWindowSize(setup: setup) }
-            .store(in: &cancellables)
         // 후보 [이 설정 사용하기] 확인 창(D-09). 요청은 SettingsUIState가 한 번에 하나만 받는다.
         ui.$pendingCandidate
             .compactMap { $0 }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] plan in self?.presentCandidateAlert(plan) }
-            .store(in: &cancellables)
-        // 5단계 목록 [마침] 확인 창(04.5 UAT F-5).
-        ui.$finishPromptRequested
-            .filter { $0 }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.presentFinishAlert() }
             .store(in: &cancellables)
     }
 
@@ -110,41 +101,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             guard let self else { return }
             self.ui.pendingCandidate = nil
             let apply = response == .alertFirstButtonReturn
-            AppLog.info("candidate alert result=\(apply ? "apply" : "cancel") unused=\(preview?.unusedCount ?? 0) emptyChords=\(emptyIDs.count)")
+            AppLog.info("candidate alert result=\(apply ? "apply" : "cancel") unused=\(preview?.unusedCount ?? 0) emptyChords=\(emptyIDs.count) window=settings")
             guard apply else { return }
-            // WR-05: 적용되지 않았으면(목록을 아직 못 읽음) 이동도, 처음 설정 마침도 하지 않는다.
+            // WR-05: 적용되지 않았으면(목록을 아직 못 읽음) 이동도 하지 않는다.
             guard self.model.applyCandidate(plan) else { return }
             self.ui.selectedPage = .keys
-            // D-15: 처음 설정 중 적용하면 마치고 「키와 언어」로 간다.
-            if self.ui.setupMode { self.ui.finishSetup() }
             if !emptyIDs.isEmpty {
                 self.ui.keysChordHighlight = Set(emptyIDs)
                 self.ui.keysAnchor = "keys.assigned"
             }
-        }
-    }
-
-    /// 5단계 목록에서 [마침]: 권장 배치는 도움말 > 배치 > FnCaps 권장에서 다시 볼 수 있다고 알린다.
-    /// [마침]이면 처음 설정을 마치고, [취소]면 5단계에 남는다. 창이 안 보이거나 다른 시트가 있으면 요청을 버린다.
-    private func presentFinishAlert() {
-        guard window.isVisible, ui.windowVisible, window.attachedSheet == nil else {
-            ui.finishPromptRequested = false
-            return
-        }
-        let path = [L("sidebar.help"), L("help.setup.title"), L("help.setup.segment.fncaps")].joined(separator: " > ")
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-        alert.messageText = L("setup.finish.confirm.title")
-        alert.informativeText = LF("setup.finish.confirm.body", path)
-        alert.addButton(withTitle: L("setup.finish"))
-        let cancel = alert.addButton(withTitle: L("help.cand.confirm.cancel"))
-        cancel.keyEquivalent = "\u{1b}"
-        alert.beginSheetModal(for: window) { [weak self] response in
-            guard let self else { return }
-            self.ui.finishPromptRequested = false
-            let finish = response == .alertFirstButtonReturn
-            AppLog.info("setup finish alert result=\(finish ? "finish" : "cancel")")
-            if finish, self.ui.setupMode { self.ui.finishSetup() }
         }
     }
 
@@ -171,21 +136,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// 평소 690×675, 처음 설정 600×500(내용 폭 560 + 좌우 여백). 창 왼쪽 위 모서리는 그대로 둔다.
-    private func applyWindowSize(setup: Bool) {
-        let size = setup
-            ? NSSize(width: DS.s(600), height: DS.s(500))
-            : NSSize(width: DS.s(690), height: DS.s(675))
-        window.contentMinSize = size
-        window.contentMaxSize = size
-        let content = window.contentRect(forFrameRect: window.frame)
-        guard content.size != size else { return }
-        let top = window.frame.maxY
-        var frame = window.frameRect(forContentRect: NSRect(origin: content.origin, size: size))
-        frame.origin.y = top - frame.height
-        window.setFrame(frame, display: true, animate: window.isVisible)
-    }
-
     private func forceRedraw(status: AppStatus) {
         guard window.isVisible else { return }
         host.view.needsLayout = true
@@ -197,23 +147,19 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     func show(page: SettingsPage? = nil) {
         if let page {
-            // 쪽을 지정한 열기는 평소 창으로 연다. 처음 설정 중이었다면 [나중에]와 같이 left를 기록한다(D-16).
-            if ui.setupMode { ui.leaveSetup() }
             ui.selectedPage = page
-        } else if ui.firstRun.opensInSetupMode {
-            ui.enterSetup(globeOK: !model.snapshot.globeNotice)
         } else if model.snapshot.permissionPanel != .hidden {
             ui.selectedPage = .general
         }
-        NSApp.setActivationPolicy(.regular)
+        // 활성화 정책은 처음 설정 창과 합산한다(08.1 D-03). 창을 앞으로 가져오기 전에 부른다.
+        presence.opened(WindowPresence.settings)
         if !centered {
             window.center()
             centered = true
         }
         bringToFront()
         ui.windowVisible = true
-        model.setWindowOpen(true)
-        AppLog.info("window show setup=\(ui.setupMode) step=\(ui.setupStep)")
+        AppLog.info("window show page=\(ui.selectedPage.rawValue)")
         // 활성화 정책 전환은 비동기로 끝나고, macOS 14의 협조적 활성화는 다른 앱이 양보하지 않으면
         // activate()를 무시한다. 창이 키 창이 될 때까지 두 번 더 올린다(Spotlight·메뉴 막대·Dock 공통 경로).
         for delay in [0.15, 0.5] {
@@ -223,6 +169,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
                 self.bringToFront(force: true)
             }
         }
+    }
+
+    /// 처음 설정이 후보 적용·마침 뒤 부른다(D-07, UI-SPEC 「나가기」 표). 이미 열려 있으면 그 쪽으로 옮겨 앞으로 가져온다.
+    /// 적용으로 정해야 하는 빈 단축키 칸이 있으면 함께 강조한다.
+    func showKeys(highlight: Set<SourceID>) {
+        show(page: .keys)
+        guard !highlight.isEmpty else { return }
+        ui.keysChordHighlight = highlight
+        ui.keysAnchor = "keys.assigned"
     }
 
     /// 창을 맨 앞으로. force는 협조적 활성화가 무시됐을 때 쓰는 대비책이다(사용자가 직접 연 경우에만 불린다).
@@ -238,16 +193,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     /// 버튼을 흐리게 해도 제목 막대 두 번 클릭·창 메뉴로 zoom이 불린다(W5). 여기서 막는다(W6).
     func windowShouldZoom(_ window: NSWindow, toFrame newFrame: NSRect) -> Bool { false }
-
-    /// 사용자가 창을 닫으면 [나중에]와 같다(orchestrator decision 4). 앱 종료·재시작은 이 경로를 지나지 않아
-    /// left를 쓰지 않으므로, 권한 뒤 자동 재시작에서도 처음 설정이 이어진다(D-18).
-    func windowShouldClose(_ sender: NSWindow) -> Bool {
-        if ui.setupMode {
-            ui.leaveSetup()
-            AppLog.info("setup left via=close")
-        }
-        return true
-    }
 
     func windowDidBecomeKey(_ notification: Notification) { ui.windowVisible = true }
     func windowDidMiniaturize(_ notification: Notification) { ui.windowVisible = false }
@@ -266,7 +211,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         ui.keysChordHighlight = []
         ui.pendingCandidate = nil
         ui.newTagIDs = []
-        NSApp.setActivationPolicy(.accessory)
-        model.setWindowOpen(false)
+        // 다른 창이 열려 있으면 WindowPresence가 setWindowOpen(false)를 부르지 않으므로 녹화를 직접 끝낸다(T-04-68).
+        model.endShortcutRecording()
+        // 마지막 창이 닫힐 때만 .accessory로 돌아간다(08.1 D-03).
+        presence.closed(WindowPresence.settings)
     }
 }

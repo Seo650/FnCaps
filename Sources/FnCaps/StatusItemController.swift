@@ -4,10 +4,13 @@ import FnCapsCore
 import SwiftUI
 
 /// 메뉴 막대 아이콘과 메뉴. 아이콘 가시성은 항상 snapshot에서 명시 설정한다(D-10).
+/// 처음 설정이 진행 중이면 「처음 설정 계속…」 줄을 「설정 열기…」 바로 위에 둔다(08.1 D-04).
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let model: AppModel
     private let updates: UpdateController?
+    private let onboarding: OnboardingUIState
     private let openSettings: (SettingsPage?) -> Void
+    private let openOnboarding: () -> Void
     private let item: NSStatusItem
     private let menu = NSMenu()
     private let onImage: NSImage?
@@ -16,10 +19,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var visibilityObservation: NSKeyValueObservation?
     private var applyingVisibility = false
 
-    init(model: AppModel, updates: UpdateController? = nil, openSettings: @escaping (SettingsPage?) -> Void) {
+    init(model: AppModel, updates: UpdateController? = nil,
+         onboarding: OnboardingUIState,
+         openSettings: @escaping (SettingsPage?) -> Void,
+         openOnboarding: @escaping () -> Void) {
         self.model = model
         self.updates = updates
+        self.onboarding = onboarding
         self.openSettings = openSettings
+        self.openOnboarding = openOnboarding
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.autosaveName = "FnCapsStatusItem"
         onImage = Bundle.main.image(forResource: "on")
@@ -28,6 +36,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         onImage?.isTemplate = true
         permissionImage?.isTemplate = true
         menu.autoenablesItems = false
+        menu.delegate = self
         item.menu = menu
 
         model.$snapshot
@@ -38,6 +47,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         updates?.$phase
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.rebuildMenu(self.model.snapshot)
+            }
+            .store(in: &cancellables)
+        // 처음 설정 상태가 바뀌면(단계 이동·마치기·나가기) 같은 실행 차례에 메뉴를 다시 짠다(UI-SPEC 「메뉴 줄」).
+        // receive(on:)을 걸지 않아야 마친 직후 줄이 남지 않는다.
+        onboarding.$revision
+            .removeDuplicates()
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.rebuildMenu(self.model.snapshot)
@@ -110,6 +128,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         menu.addItem(.separator())
 
+        // 보이는 조건은 사이드바 「처음 설정 n/5」와 같다(08.1 D-04). 처음 설정은 선택 사항이라
+        // 맨 위 알림 자리에 두지 않고 점·단축키 없이 평범한 줄로 둔다(UI-SPEC 「메뉴 줄」).
+        if onboarding.firstRun.isActive {
+            let resume = NSMenuItem(title: L("menu.resumeSetup"), action: #selector(openOnboardingAction), keyEquivalent: "")
+            resume.target = self
+            menu.addItem(resume)
+        }
+
         let settings = NSMenuItem(title: L("menu.openSettings"), action: #selector(openSettingsAction), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
@@ -134,6 +160,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let quit = NSMenuItem(title: L("menu.quit"), action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
+    }
+
+    /// 메뉴가 열리기 직전에 다시 짠다. 처음 설정 상태가 다른 길로 바뀌어도 줄의 유무가 맞는다.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        rebuildMenu(model.snapshot)
     }
 
     private func statusDotColor(_ snapshot: AppSnapshot) -> NSColor {
@@ -166,6 +197,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         if alert.runModal() == .alertFirstButtonReturn { model.setIconHidden(true) }
     }
     @objc private func openSettingsAction() { openSettings(nil) }
+    /// 메뉴가 닫힌 뒤 처음 설정 창을 연다(AppDelegate가 DispatchQueue.main.async로 잇는다).
+    @objc private func openOnboardingAction() { openOnboarding() }
     @objc private func openKeysPage() { openSettings(.keys) }
     @objc private func openAboutPage() { openSettings(.about) }
     @objc private func openReportPage() { openSettings(.report) }

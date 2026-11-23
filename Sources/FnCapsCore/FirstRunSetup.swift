@@ -116,8 +116,12 @@ public final class FirstRunSetup {
     }
 
     /// 재시작·이어서 하기로 단계 화면을 열 때 보일 단계. 저장된 3단계가 이미 충족이면 4단계다.
-    public static func resumeStep(stored: Int, globeOK: Bool) -> Int {
+    /// 권한을 주기 전에는 2단계를 넘지 않는다(G-08.1-4, 2026-11-23 UAT): 저장값이 3 이상이어도 needsGrant면
+    /// 2단계로 연다. needsGrant는 호출처가 permissionPanel == .grant로 넘긴다(2단계 [다음]을 막는 조건과
+    /// 같고, 막힘은 자르지 않는다).
+    public static func resumeStep(stored: Int, globeOK: Bool, needsGrant: Bool) -> Int {
         let clamped = min(max(stored, 1), stepCount)
+        if needsGrant && clamped > 2 { return 2 }
         return clamped == 3 && globeOK ? 4 : clamped
     }
 

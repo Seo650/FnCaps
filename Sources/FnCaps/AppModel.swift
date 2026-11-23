@@ -96,6 +96,8 @@ final class AppModel: ObservableObject {
     private var lastProbe: Bool?
     private var lastWatchdogProbe: Bool?
     private lazy var restartMemory = RestartMemory(defaults: defaults)
+    /// 마지막 허용 뒤 탭을 깐 적이 있는지(G-08.1-4). 권한 잃음과 허용 직후 실패를 가른다.
+    private var grantSession = GrantSession()
     private lazy var recovery = TapRecovery(
         attempt: { [weak self] done in self?.attemptTap(done) },
         onFailure: { [weak self] result in self?.recoveryFailed(result) })
@@ -492,6 +494,7 @@ final class AppModel: ObservableObject {
         guard let previous, previous != ax else { return }
         logHidAccess(ax: ax, reason: "ax-change")
         if ax {
+            grantSession.noteGrant()
             restartMemory.clear()
             awaitingRegrant = false
             if !tapBlocked { recovery.restart() }
@@ -525,6 +528,7 @@ final class AppModel: ObservableObject {
         if ok {
             trusted = true
             wasTrusted = true
+            grantSession.noteTapStarted()
             stuck = false
             resetFailed = false
             AppLog.info("recovery result=started")
@@ -540,8 +544,9 @@ final class AppModel: ObservableObject {
 
     private func recoveryFailed(_ result: TapRecovery.StartResult) {
         let canRestart = restartMemory.canRestart
-        let action = RecoveryFailureAction.decide(result: result, canRestart: canRestart)
-        AppLog.info("recovery failed action=\(action) canRestart=\(canRestart)")
+        let tapSinceGrant = grantSession.tapStartedSinceGrant
+        let action = RecoveryFailureAction.decide(result: result, canRestart: canRestart, tapStartedSinceGrant: tapSinceGrant)
+        AppLog.info("recovery failed action=\(action) canRestart=\(canRestart) tapSinceGrant=\(tapSinceGrant)")
         logHidAccess(ax: PermissionMonitor.axTrusted(), reason: "recovery-failed")
         switch action {
         case .autoRestart:
@@ -554,7 +559,10 @@ final class AppModel: ObservableObject {
         case .showReset:
             stuck = true
         case .showPermissionNeeded:
+            // G-08.1-4: 이미 탭을 깔았던 프로세스가 권한을 잃으면 재시작하지 않고 제자리에서 권한 없음을 보인다.
+            // 탭이 없으니 Caps 매핑과 #60은 유예 뒤 CapsMappingPolicy가 내린다.
             trusted = false
+            grantSession.noteLossShown()
         case .ignore:
             break
         }
@@ -563,6 +571,7 @@ final class AppModel: ObservableObject {
 
     /// L5: 켠 채 철회해도 입력이 멈추지 않도록 판단 전에 탭부터 내린다(GAP-08).
     private func accessibilityChanged() {
+        grantSession.noteAccessibilityNotification()
         rebuildGeneration += 1
         recovery.stop()
         tap.uninstall()

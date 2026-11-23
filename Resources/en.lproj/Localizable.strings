@@ -12,8 +12,10 @@
 "setup.back" = "Back";
 "setup.next" = "Next";
 "setup.finish" = "Done";
-"setup.finish.confirm.title" = "Finish setup?";
+"setup.finish.confirm.title" = "Finish without choosing a layout?";
 "setup.finish.confirm.body" = "You can see the recommended layouts again in %@.";
+"setup.finish.confirm.back" = "Go Back and Choose";
+"setup.finish.confirm.finish" = "Finish Without Layout";
 "setup.welcome.title" = "Welcome to FnCaps";
 "setup.welcome.body" = "Switch input sources with fn and Caps Lock. Setup takes a few steps.";
 "setup.globe.title" = "🌐 Key → Change Input Source";
@@ -92,6 +94,7 @@
 "status.off" = "Off";
 "menu.turnOn" = "Turn On FnCaps";
 "menu.turnOff" = "Turn Off FnCaps";
+"menu.resumeSetup" = "Continue Initial Setup…";
 "menu.openSettings" = "Open Settings…";
 "menu.report" = "Report a Problem…";
 "menu.quit" = "Quit FnCaps";

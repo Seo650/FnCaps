@@ -12,8 +12,10 @@
 "setup.back" = "Atrás";
 "setup.next" = "Siguiente";
 "setup.finish" = "Listo";
-"setup.finish.confirm.title" = "¿Terminar la configuración?";
+"setup.finish.confirm.title" = "¿Terminar sin elegir una distribución?";
 "setup.finish.confirm.body" = "Puede volver a ver las distribuciones recomendadas en %@.";
+"setup.finish.confirm.back" = "Volver y elegir";
+"setup.finish.confirm.finish" = "Terminar sin distribución";
 "setup.welcome.title" = "Te damos la bienvenida a FnCaps";
 "setup.welcome.body" = "Cambia de fuente de entrada con fn y Caps Lock. La configuración solo lleva unos pasos.";
 "setup.globe.title" = "Tecla 🌐 → Cambiar fuente de entrada";
@@ -92,6 +94,7 @@
 "status.off" = "Desactivado";
 "menu.turnOn" = "Activar FnCaps";
 "menu.turnOff" = "Desactivar FnCaps";
+"menu.resumeSetup" = "Continuar la configuración inicial…";
 "menu.openSettings" = "Abrir ajustes…";
 "menu.report" = "Informar de un problema…";
 "menu.quit" = "Salir de FnCaps";

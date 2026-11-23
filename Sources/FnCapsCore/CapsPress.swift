@@ -124,14 +124,15 @@ public enum CapsLongRule {
         return fromBase ? .flipLock : .switchToBaseThenFlip
     }
 
-    /// 길게 누르기로 바꿀 영어(기준 언어) 소스를 고른다. Caps 목록 → fn 목록 → 「사용 안 함」 순서로,
-    /// 같은 목록 안에서는 놓인 순서로 첫 기준 언어 소스. 켜진 소스(`sources`)에 있는 것만 본다.
-    /// 어느 목록에 영어가 있든 길게 누르기가 동작한다(사용자 결정 2026-11-21, quick 261121-cle).
+    /// 길게 누르기로 바꿀 영어(기준 언어) 소스를 고른다. Caps 목록 → fn 목록 → 지정 단축키 목록 →
+    /// 「사용 안 함」 순서로, 같은 목록 안에서는 놓인 순서로 첫 기준 언어 소스. 켜진 소스(`sources`)에 있는 것만 본다.
+    /// 어느 목록에 영어가 있든 길게 누르기가 동작한다(사용자 결정 2026-11-21, 07-REVIEW WR-01).
     /// 영어가 하나도 없으면 nil이고, 부르는 쪽은 전환 없이 잠금만 바꾼다.
     public static func englishTarget(
-        caps: [SourceID], fn: [SourceID], excluded: [SourceID], sources: [SourceInfo]
+        caps: [SourceID], fn: [SourceID], assigned: [SourceID], excluded: [SourceID],
+        sources: [SourceInfo]
     ) -> SourceID? {
         let base = Set(sources.filter { SourceClassifier.role(of: $0) == .base }.map(\.id))
-        return (caps + fn + excluded).first { base.contains($0) }
+        return (caps + fn + assigned + excluded).first { base.contains($0) }
     }
 }

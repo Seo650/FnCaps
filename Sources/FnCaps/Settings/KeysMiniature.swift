@@ -3,7 +3,7 @@ import SwiftUI
 
 /// 도움말 「설정하기」의 보기 전용 축소판(D-47). 「키와 언어」 쪽 그림을 새로 그리지 않고
 /// `KeyRingBox`·`SourceTile`·`Keycap`을 그대로 줄여 쓴다. 끌기·우클릭 메뉴·hover는 없다.
-/// (화면 상태는 SDK 27 빌드 제약으로 `SettingsUIState`에 둔다)
+/// 화면 상태는 부르는 쪽이 `KeysPageState`로 넘긴다(도움말·처음 설정이 각자 갖는다).
 enum HelpMiniature {
     /// 축소판 배율. 보기 전용이라 손잡이·「n/6」은 그리지 않는다(2026-11-13).
     static let scale: CGFloat = 0.8
@@ -84,7 +84,8 @@ struct MiniRow<Box: View>: View {
 
 /// Caps·fn·지정 상자를 위에서 아래로 놓는 축소판. 빈 목록은 줄을 그리지 않는다.
 struct KeysMiniature: View {
-    @ObservedObject var ui: SettingsUIState
+    /// 보기 전용 고리 상태. KeyRingBox가 관찰한다.
+    let keys: KeysPageState
     var caps: [SourceRow] = []
     var fn: [SourceRow] = []
     var assigned: [SourceRow] = []
@@ -132,7 +133,7 @@ struct KeysMiniature: View {
     }
 
     private func ring(_ list: SourceList, _ rows: [SourceRow], entryID: SourceID?) -> some View {
-        KeyRingBox(list: list, rows: rows, currentID: nil, newIDs: [], keys: ui.helpMiniKeys,
+        KeyRingBox(list: list, rows: rows, currentID: nil, newIDs: [], keys: keys,
                    showsCount: showsCount, showsArrows: showsArrows,
                    singleKey: list == .fn ? "help.mini.fnSingle" : "keys.single",
                    entryID: entryID) {

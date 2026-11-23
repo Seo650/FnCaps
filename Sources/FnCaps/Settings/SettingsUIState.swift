@@ -45,27 +45,9 @@ enum HelpSetupSegment: String, CaseIterable, Identifiable {
 }
 
 /// 설정창 화면 상태. 설정값은 AppModel이 갖고 여기에는 화면 동작만 둔다.
+/// 처음 설정 화면 상태는 별도 창의 `OnboardingUIState`가 갖는다(08.1 D-01, D-03).
 /// (SDK 27 빌드 제약으로 화면 상태는 ObservableObject로 둔다)
 final class SettingsUIState: ObservableObject {
-    /// 처음 설정 진행 저장(04.4 D-18). 기본은 메모리 저장이라 렌더 하니스가 사용자 defaults에 쓰지 않는다(T-04.4-04).
-    /// 실제 창은 SettingsWindowController가 `.standard` 기반 값을 넘긴다.
-    let firstRun: FirstRunSetup
-    /// 처음 설정 화면 여부. 쪽(page)을 늘리지 않고 이 값 하나로 전환한다.
-    /// (@State를 쓸 수 없어 화면 상태를 여기에 둔다: SDK 27 빌드 제약)
-    @Published var setupMode = false
-    @Published var setupStep = 1
-    /// 5단계 「직접 설정」 분기 쪽을 보이는지. 저장하지 않는다(UI-SPEC S-17): 단계 이동·나가기·마치기·
-    /// 이어서 들어오기에서 false로 돌아가 5단계 목록으로 온다.
-    /// (@State를 쓸 수 없어 화면 상태를 여기에 둔다: SDK 27 빌드 제약)
-    @Published var setupBranch = false
-    /// 5단계 「직접 설정」 행 호버(DS.dropHighlight 바탕, UI-SPEC §6-5).
-    /// (@State를 쓸 수 없어 화면 상태를 여기에 둔다: SDK 27 빌드 제약)
-    @Published var setupCustomHover = false
-
-    init(firstRun: FirstRunSetup = FirstRunSetup(defaults: nil)) {
-        self.firstRun = firstRun
-    }
-
     @Published var selectedPage: SettingsPage = .general
     @Published var openInfoID: String?
     @Published var selectedExceptionID: String?
@@ -93,8 +75,6 @@ final class SettingsUIState: ObservableObject {
     /// 값이 있는 동안 모든 후보 버튼이 비활성이라 연타로 창이 여러 개 뜨지 않는다(T-04.4-10).
     /// (@State를 쓸 수 없어 화면 상태를 여기에 둔다: SDK 27 빌드 제약)
     @Published var pendingCandidate: GuidancePlan?
-    /// 5단계 목록에서 [마침]을 눌렀을 때의 확인 창 요청. 창 컨트롤러가 띄우고 false로 되돌린다(04.5 UAT F-5).
-    @Published var finishPromptRequested = false
     /// 다른 쪽에서 「키와 언어」 묶음으로 올 때 갈 id. KeysPage가 한 번 쓰고 지운다. 지금은 "keys.assigned"만.
     @Published var keysAnchor: String?
     /// D-10: 적용 뒤 직접 정해야 하는 빈 녹화 칸 강조. 0.6초 뒤 KeysPage가 지운다.
@@ -115,45 +95,6 @@ final class SettingsUIState: ObservableObject {
         helpSetupSegment = .recommended
         helpAnchor = "help.setup"
         selectedPage = .help
-    }
-
-    /// D-16 이어감, D-18: 저장된 단계에서 처음 설정을 연다.
-    func enterSetup(globeOK: Bool) {
-        firstRun.resume()
-        setupStep = FirstRunSetup.resumeStep(stored: firstRun.step, globeOK: globeOK)
-        firstRun.setStep(setupStep)
-        setupBranch = false
-        setupMode = true
-    }
-
-    /// D-18: 단계를 옮기고 저장한다. 「직접 설정」 분기는 저장하지 않는다(UI-SPEC S-17).
-    func setupGo(to step: Int) {
-        setupStep = step
-        setupBranch = false
-        firstRun.setStep(step)
-    }
-
-    /// D-16: [나중에]·창 닫기. left를 저장하고 평소 창으로 바꾼다.
-    func leaveSetup() {
-        firstRun.markLeft()
-        setupBranch = false
-        setupCustomHover = false
-        setupMode = false
-    }
-
-    /// D-15 마치면 「키와 언어」로, D-16 사이드바 항목이 사라진다.
-    func finishSetup() {
-        firstRun.finish()
-        setupBranch = false
-        setupCustomHover = false
-        setupMode = false
-        selectedPage = .keys
-    }
-
-    /// 5단계 [마침]. 후보 목록 쪽에서는 권장 배치를 도움말에서 다시 볼 수 있다는 확인 창을 먼저 띄운다
-    /// (그냥 누르고 지나가는 사람이 많다, 04.5 UAT 사용자 결정). 「직접 설정」 분기 쪽은 바로 마친다.
-    func requestFinish() {
-        if setupBranch { finishSetup() } else { finishPromptRequested = true }
     }
 
     /// D-09: 후보 [이 설정 사용하기] 요청. 확인 창은 창 컨트롤러(04.4-06)가 띄운다.

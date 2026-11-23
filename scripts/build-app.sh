@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build FnCaps.app (or FnCapsSpike.app) from the SwiftPM product and sign it.
+# Build FnCaps.app (or FnCapsSpike.app; --dev builds FnCapsBuild.app) from the SwiftPM product and sign it.
 # Signing: "FnCaps Dev Local" identity if present (stable Accessibility grant), else ad-hoc.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -10,13 +10,18 @@ FORCE_ADHOC=0
 REQUIRE_IDENTITY=0
 PRODUCT_KIND="app"
 VERSION_OVERRIDE=""
+DEV_BUILD=0
+DEV_NAME="FnCapsBuild"
+ICON_SRC="Resources/Assets/app-icon.png"
 
 usage() {
   cat <<USAGE
-사용법: scripts/build-app.sh [--product app|spike] [--debug] [--universal] [--adhoc]
+사용법: scripts/build-app.sh [--product app|spike] [--debug] [--dev] [--universal] [--adhoc]
                            [--require-identity] [--version X.Y.Z] [--help]
   --product           app(FnCaps.app, 기본) 또는 spike(FnCapsSpike.app)
   --debug             debug 구성으로 빌드 (기본: release)
+  --dev               build/FnCapsBuild.app으로 빌드 (번들 사본 이름 FnCapsBuild, 호박색 아이콘.
+                      번들 ID·서명 요건은 그대로, --product app 전용)
   --universal         arm64 + x86_64 유니버설 빌드 (기본: arm64만)
   --adhoc             인증서가 있어도 ad-hoc 서명
   --require-identity  서명 인증서를 못 찾으면 ad-hoc으로 넘어가지 않고 실패
@@ -34,6 +39,7 @@ while [ "$#" -gt 0 ]; do
     --version) [ "$#" -ge 2 ] || { echo "--version 값이 필요합니다" >&2; usage >&2; exit 2; }; VERSION_OVERRIDE="$2"; shift ;;
     --version=*) VERSION_OVERRIDE="${1#--version=}" ;;
     --debug) CONFIG="debug" ;;
+    --dev) DEV_BUILD=1 ;;
     --universal) ARCH_FLAGS=(--arch arm64 --arch x86_64) ;;
     --adhoc) FORCE_ADHOC=1 ;;
     --require-identity) REQUIRE_IDENTITY=1 ;;
@@ -58,6 +64,21 @@ case "$PRODUCT_KIND" in
     PRODUCT="FnCapsSpike"; BUNDLE_ID="dev.fncaps.spike"; APP="build/FnCapsSpike.app"; PLIST="Resources/FnCapsSpike-Info.plist" ;;
   *) echo "알 수 없는 제품: $PRODUCT_KIND (app 또는 spike)" >&2; usage >&2; exit 2 ;;
 esac
+# --dev: 개발용 번들을 /Applications 설치본과 눈으로 구분한다. 번들 ID는 그대로 두어
+# 손쉬운 사용 권한, UserDefaults, 중복 실행 가드가 설치본과 이어진다. 이름과 아이콘은
+# 번들 사본에만 적용한다. 번들 ID가 같으므로 설치본과 동시에 실행할 수는 없다.
+if [ "$DEV_BUILD" -eq 1 ]; then
+  if [ "$PRODUCT_KIND" != "app" ]; then
+    echo "오류: --dev는 --product app에서만 쓸 수 있습니다" >&2
+    exit 2
+  fi
+  APP="build/${DEV_NAME}.app"
+  ICON_SRC="Resources/Assets/app-icon-build.png"
+  if [ ! -f "$ICON_SRC" ]; then
+    echo "오류: dev 아이콘을 찾지 못했습니다: $ICON_SRC" >&2
+    exit 1
+  fi
+fi
 if [ "${#ARCH_FLAGS[@]}" -eq 0 ]; then ARCH_FLAGS=(--arch arm64); fi
 
 IDENTITY_NAME="${FNCAPS_SIGN_IDENTITY:-FnCaps Dev Local}"
@@ -84,6 +105,12 @@ cp "$PLIST" "$APP/Contents/Info.plist"
 # 시험용 번들 버전. Resources/ 원본 plist는 바꾸지 않는다.
 if [ -n "$VERSION_OVERRIDE" ]; then
   plutil -replace CFBundleShortVersionString -string "$VERSION_OVERRIDE" "$APP/Contents/Info.plist"
+fi
+# dev 번들 사본의 표시 이름만 바꾼다. 원본 Resources plist는 읽기만 하고,
+# codesign보다 앞이어야 서명이 깨지지 않는다. CFBundleIdentifier는 건드리지 않는다.
+if [ "$DEV_BUILD" -eq 1 ]; then
+  plutil -replace CFBundleName -string "$DEV_NAME" "$APP/Contents/Info.plist"
+  plutil -replace CFBundleDisplayName -string "$DEV_NAME" "$APP/Contents/Info.plist"
 fi
 
 # LC_BUILD_VERSION 검사: minos는 14.0, sdk는 14.0이 아닌 실제 SDK 버전이어야 한다.
@@ -112,7 +139,7 @@ if [ "$PRODUCT_KIND" = "app" ]; then
   trap 'rm -rf "$ICON_TMP"' EXIT
   ICONSET="$ICON_TMP/AppIcon.iconset"
   mkdir -p "$ICONSET"
-  SRC="Resources/Assets/app-icon.png"
+  SRC="$ICON_SRC"
   for sz in 16 32 128 256 512; do
     sips -z "$sz" "$sz" "$SRC" --out "$ICONSET/icon_${sz}x${sz}.png" >/dev/null
     sips -z "$((sz * 2))" "$((sz * 2))" "$SRC" --out "$ICONSET/icon_${sz}x${sz}@2x.png" >/dev/null
@@ -172,4 +199,7 @@ fi
 echo "앱: $APP"
 if [ "$PRODUCT_KIND" = "app" ]; then
   echo "권한 시험은 반드시 'open $APP'으로 실행하세요. 터미널에서 바이너리를 직접 실행하면 터미널의 손쉬운 사용 권한을 물려받습니다."
+fi
+if [ "$DEV_BUILD" -eq 1 ]; then
+  echo "설치본과 번들 ID가 같으므로 설치본을 끈 뒤 'open $APP'으로 실행하세요."
 fi

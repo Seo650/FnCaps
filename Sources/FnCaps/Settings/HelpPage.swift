@@ -110,10 +110,11 @@ struct HelpPage: View {
                 .font(DS.controlFont)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, DS.s(12))
+                // 상자 안 선은 모두 양쪽 rowInset에서 끝난다(G-08.1-11).
                 SettingsDivider()
                 switch ui.helpSetupSegment {
                 case .macOS:
-                    MacOSPicture(ui: ui, ready: ready, tiles: tiles)
+                    MacOSPicture(miniKeys: ui.helpMiniKeys, ready: ready, tiles: tiles)
                         .padding(.horizontal, DS.rowInset)
                         .padding(.vertical, DS.s(12))
                     SettingsDivider()
@@ -122,7 +123,7 @@ struct HelpPage: View {
                         .padding(.vertical, DS.s(12))
                 case .recommended:
                     // D-12: 권장 아래에는 요약 줄(같음/다름)을 두지 않는다. 후보가 자기 여백을 갖는다.
-                    CandidateList(ui: ui, ready: ready, tiles: tiles)
+                    CandidateList(ui: ui, miniKeys: ui.helpMiniKeys, ready: ready, tiles: tiles)
                 }
             }
         case .single:
